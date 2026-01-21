@@ -1,5 +1,5 @@
 /* ==========================================
-   Info 24 Jam - Main Application JS (FIXED)
+   Info 24 Jam - Main Application JS (FINAL FIX)
    ========================================== */
 
 // ==========================================
@@ -46,6 +46,9 @@ async function initApp() {
     // Load settings dari localStorage
     loadSettings();
     
+    // Tunggu sampai Supabase library ready (FIX: Tambah delay)
+    await waitForSupabase();
+    
     // Inisialisasi Supabase
     initSupabase();
     
@@ -62,6 +65,36 @@ async function initApp() {
     loadReports();
     
     console.log('✅ App initialized successfully!');
+}
+
+// ==========================================
+// FIX: Wait for Supabase library to load
+// ==========================================
+
+function waitForSupabase() {
+    return new Promise((resolve) => {
+        if (typeof window.supabase !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        let attempts = 0;
+        const maxAttempts = 50; // 5 detik maksimal
+        
+        const checkInterval = setInterval(() => {
+            attempts++;
+            
+            if (typeof window.supabase !== 'undefined') {
+                clearInterval(checkInterval);
+                console.log('✅ Supabase library loaded');
+                resolve();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkInterval);
+                console.error('❌ Supabase library gagal ter-load setelah 5 detik');
+                resolve(); // Tetap lanjut meski gagal
+            }
+        }, 100);
+    });
 }
 
 // ==========================================
@@ -115,24 +148,26 @@ function saveSettings() {
 
 function initSupabase() {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
-        console.warn('⚠️ Supabase credentials not configured');
+        console.warn('⚠️ Supabase credentials not configured. Silakan buka Pengaturan untuk setup.');
         return;
     }
     
     try {
-        // FIX: Cek apakah window.supabase tersedia
-        if (typeof window.supabase === 'undefined') {
-            console.error('❌ Supabase library belum ter-load! Pastikan script Supabase di-load sebelum app.js');
+        // FIX: Validasi window.supabase dengan cara lebih aman
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            console.error('❌ Supabase library tidak ter-load dengan benar!');
+            console.log('Pastikan script <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> ada di index.html');
             return;
         }
         
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log('✅ Supabase initialized');
+        console.log('✅ Supabase initialized successfully');
         
         // Setup real-time subscription
         setupRealtimeListener();
     } catch (error) {
         console.error('❌ Supabase initialization error:', error);
+        alert('❌ Gagal inisialisasi Supabase. Periksa kredensial di Pengaturan.');
     }
 }
 
@@ -158,13 +193,13 @@ function setupRealtimeListener() {
             }
         )
         .subscribe((status) => {
-            console.log('Real-time subscription status:', status);
+            console.log('📡 Real-time subscription status:', status);
         });
 }
 
 async function loadReports() {
     if (!supabase) {
-        console.warn('⚠️ Supabase not initialized');
+        console.warn('⚠️ Supabase not initialized. Silakan setup kredensial di Pengaturan.');
         return;
     }
     
@@ -178,13 +213,15 @@ async function loadReports() {
         
         if (error) throw error;
         
-        if (data) {
+        if (data && data.length > 0) {
             data.forEach(report => addReportToMap(report));
+            console.log(`✅ Loaded ${data.length} reports`);
+        } else {
+            console.log('📭 Belum ada laporan');
         }
-        
-        console.log(`✅ Loaded ${data?.length || 0} reports`);
     } catch (error) {
         console.error('❌ Error loading reports:', error);
+        alert(`❌ Gagal memuat laporan: ${error.message}`);
     } finally {
         showLoading(false);
     }
@@ -221,8 +258,10 @@ async function submitReport(formData) {
         alert(`❌ Gagal mengirim laporan: ${error.message}`);
     } finally {
         showLoading(false);
-        submitBtn.disabled = false;
-        spinner.classList.add('hidden');
+        const submitBtn = document.querySelector('#formLapor button[type="submit"]');
+        const spinner = document.getElementById('submitSpinner');
+        if (submitBtn) submitBtn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
     }
 }
 
@@ -360,15 +399,21 @@ function getUserLocation() {
                 }
                 
                 // Update location display in form
-                document.getElementById('lokasi').innerHTML = 
-                    `<span class="text-green-600">✅ ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}</span>`;
+                const lokasiEl = document.getElementById('lokasi');
+                if (lokasiEl) {
+                    lokasiEl.innerHTML = 
+                        `<span class="text-green-600">✅ ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}</span>`;
+                }
                 
                 console.log('📍 Location updated:', userLocation);
             },
             (error) => {
                 console.warn('⚠️ Geolocation error:', error);
-                document.getElementById('lokasi').innerHTML = 
-                    `<span class="text-yellow-600">⚠️ GPS tidak tersedia</span>`;
+                const lokasiEl = document.getElementById('lokasi');
+                if (lokasiEl) {
+                    lokasiEl.innerHTML = 
+                        `<span class="text-yellow-600">⚠️ GPS tidak tersedia, gunakan lokasi default</span>`;
+                }
             },
             {
                 enableHighAccuracy: true,
@@ -376,6 +421,8 @@ function getUserLocation() {
                 timeout: 5000
             }
         );
+    } else {
+        console.warn('⚠️ Geolocation tidak didukung browser ini');
     }
 }
 
@@ -386,6 +433,8 @@ function getUserLocation() {
 function setupCloudinaryUpload() {
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
+    
+    if (!uploadArea || !fileInput) return;
     
     // Click to upload
     uploadArea.addEventListener('click', () => fileInput.click());
@@ -438,13 +487,16 @@ async function uploadImageToCloudinary(file) {
             body: formData
         });
         
-        if (!response.ok) throw new Error('Upload failed');
+        if (!response.ok) {
+            throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        }
         
         const data = await response.json();
+        console.log('✅ Image uploaded to Cloudinary:', data.secure_url);
         return data.secure_url;
     } catch (error) {
         console.error('❌ Cloudinary upload error:', error);
-        alert('❌ Gagal upload foto. Periksa konfigurasi Cloudinary.');
+        alert('❌ Gagal upload foto. Periksa konfigurasi Cloudinary di Pengaturan.');
         return null;
     }
 }
@@ -455,22 +507,22 @@ async function uploadImageToCloudinary(file) {
 
 function setupEventListeners() {
     // Modal triggers
-    document.getElementById('btnLapor').addEventListener('click', () => openModal('modalLapor'));
-    document.getElementById('btnSettings').addEventListener('click', () => openModal('modalSettings'));
+    document.getElementById('btnLapor')?.addEventListener('click', () => openModal('modalLapor'));
+    document.getElementById('btnSettings')?.addEventListener('click', () => openModal('modalSettings'));
     
     // Modal closes
-    document.getElementById('btnBatal').addEventListener('click', () => closeModal('modalLapor'));
-    document.getElementById('btnCloseSettings').addEventListener('click', () => closeModal('modalSettings'));
-    document.getElementById('btnCloseInfo').addEventListener('click', () => closeModal('modalInfo'));
+    document.getElementById('btnBatal')?.addEventListener('click', () => closeModal('modalLapor'));
+    document.getElementById('btnCloseSettings')?.addEventListener('click', () => closeModal('modalSettings'));
+    document.getElementById('btnCloseInfo')?.addEventListener('click', () => closeModal('modalInfo'));
     
     // Settings
-    document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
+    document.getElementById('btnSaveSettings')?.addEventListener('click', saveSettings);
     
     // Form submission
-    document.getElementById('formLapor').addEventListener('submit', handleFormSubmit);
+    document.getElementById('formLapor')?.addEventListener('submit', handleFormSubmit);
     
     // Delete report
-    document.getElementById('btnDeleteReport').addEventListener('click', () => {
+    document.getElementById('btnDeleteReport')?.addEventListener('click', () => {
         const reportId = document.getElementById('btnDeleteReport').dataset.reportId;
         if (reportId) deleteReport(reportId);
     });
@@ -504,10 +556,8 @@ async function handleFormSubmit(e) {
     
     // Upload image if provided
     if (userCurrentFile) {
+        console.log('📤 Uploading image...');
         fotoUrl = await uploadImageToCloudinary(userCurrentFile);
-        if (!fotoUrl) {
-            alert('⚠️ Gagal upload foto, laporan dapat dikirim tanpa foto.');
-        }
     }
     
     // Prepare report data
@@ -524,8 +574,12 @@ async function handleFormSubmit(e) {
 }
 
 function resetForm() {
-    document.getElementById('formLapor').reset();
-    document.getElementById('fileName').textContent = '';
+    const form = document.getElementById('formLapor');
+    if (form) form.reset();
+    
+    const fileName = document.getElementById('fileName');
+    if (fileName) fileName.textContent = '';
+    
     userCurrentFile = null;
 }
 
@@ -555,8 +609,11 @@ function showReportDetail(reportId) {
         </div>
     `;
     
-    document.getElementById('infoContent').innerHTML = content;
-    document.getElementById('btnDeleteReport').dataset.reportId = reportId;
+    const infoContent = document.getElementById('infoContent');
+    if (infoContent) infoContent.innerHTML = content;
+    
+    const deleteBtn = document.getElementById('btnDeleteReport');
+    if (deleteBtn) deleteBtn.dataset.reportId = reportId;
     
     openModal('modalInfo');
 }
@@ -599,10 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function showLoading(show) {
     const loadingBar = document.getElementById('loadingBar');
-    if (show) {
-        loadingBar.style.opacity = '1';
-    } else {
-        loadingBar.style.opacity = '0';
+    if (loadingBar) {
+        loadingBar.style.opacity = show ? '1' : '0';
     }
 }
 
