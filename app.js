@@ -37,15 +37,25 @@ const categoryColors = {
 async function initApp() {
     console.log('🚀 Initializing Info 24 Jam App...');
     
-    loadSettings();
-    await waitForSupabase();
-    initSupabase();
-    initMap();
-    getUserLocation();
-    setupEventListeners();
-    loadReports();
-    
-    console.log('✅ App initialized successfully!');
+    try {
+        loadSettings();
+        await waitForSupabase();
+        initSupabase();
+        initMap();
+        getUserLocation();
+        setupEventListeners();
+        
+        // Only load reports if Supabase is configured
+        if (SUPABASE_URL && SUPABASE_KEY) {
+            loadReports();
+        } else {
+            console.warn('⚠️ Supabase not configured. Please set up in Settings.');
+        }
+        
+        console.log('✅ App initialized successfully!');
+    } catch (error) {
+        console.error('❌ Error initializing app:', error);
+    }
 }
 
 // Wait for Supabase library to load
@@ -82,17 +92,22 @@ function loadSettings() {
     CLOUDINARY_CLOUD = localStorage.getItem('cloudinaryCloud') || '';
     CLOUDINARY_PRESET = localStorage.getItem('cloudinaryPreset') || '';
     
-    document.getElementById('supabaseUrl').value = SUPABASE_URL;
-    document.getElementById('supabaseKey').value = SUPABASE_KEY;
-    document.getElementById('cloudinaryCloud').value = CLOUDINARY_CLOUD;
-    document.getElementById('cloudinaryPreset').value = CLOUDINARY_PRESET;
+    const urlInput = document.getElementById('supabaseUrl');
+    const keyInput = document.getElementById('supabaseKey');
+    const cloudInput = document.getElementById('cloudinaryCloud');
+    const presetInput = document.getElementById('cloudinaryPreset');
+    
+    if (urlInput) urlInput.value = SUPABASE_URL;
+    if (keyInput) keyInput.value = SUPABASE_KEY;
+    if (cloudInput) cloudInput.value = CLOUDINARY_CLOUD;
+    if (presetInput) presetInput.value = CLOUDINARY_PRESET;
 }
 
 function saveSettings() {
-    const url = document.getElementById('supabaseUrl').value.trim();
-    const key = document.getElementById('supabaseKey').value.trim();
-    const cloud = document.getElementById('cloudinaryCloud').value.trim();
-    const preset = document.getElementById('cloudinaryPreset').value.trim();
+    const url = document.getElementById('supabaseUrl')?.value.trim() || '';
+    const key = document.getElementById('supabaseKey')?.value.trim() || '';
+    const cloud = document.getElementById('cloudinaryCloud')?.value.trim() || '';
+    const preset = document.getElementById('cloudinaryPreset')?.value.trim() || '';
     
     if (!url || !key || !cloud || !preset) {
         alert('⚠️ Semua field harus diisi!');
@@ -111,7 +126,12 @@ function saveSettings() {
     
     initSupabase();
     closeModal('modalSettings');
-    alert('✅ Pengaturan berhasil disimpan!');
+    alert('✅ Pengaturan berhasil disimpan! Refresh halaman untuk memuat data.');
+    
+    // Reload the page to apply new settings
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
 }
 
 // Supabase Initialization
@@ -138,20 +158,24 @@ function initSupabase() {
 function setupRealtimeListener() {
     if (!supabaseClient) return;
     
-    supabaseClient
-        .channel('public:reports')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, (payload) => {
-            console.log('📡 Real-time update:', payload);
-            
-            if (payload.eventType === 'INSERT') {
-                addReportToMap(payload.new);
-            } else if (payload.eventType === 'UPDATE') {
-                updateReportMarker(payload.new);
-            } else if (payload.eventType === 'DELETE') {
-                removeReportMarker(payload.old.id);
-            }
-        })
-        .subscribe();
+    try {
+        supabaseClient
+            .channel('public:reports')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, (payload) => {
+                console.log('📡 Real-time update:', payload);
+                
+                if (payload.eventType === 'INSERT') {
+                    addReportToMap(payload.new);
+                } else if (payload.eventType === 'UPDATE') {
+                    updateReportMarker(payload.new);
+                } else if (payload.eventType === 'DELETE') {
+                    removeReportMarker(payload.old.id);
+                }
+            })
+            .subscribe();
+    } catch (error) {
+        console.error('❌ Error setting up realtime listener:', error);
+    }
 }
 
 async function loadReports() {
@@ -183,7 +207,7 @@ async function loadReports() {
 
 async function submitReport(formData) {
     if (!supabaseClient) {
-        alert('❌ Supabase belum dikonfigurasi!');
+        alert('❌ Supabase belum dikonfigurasi! Silakan atur di menu Pengaturan.');
         return;
     }
     
@@ -191,8 +215,9 @@ async function submitReport(formData) {
         showLoading(true);
         const submitBtn = document.querySelector('#formLapor button[type="submit"]');
         const spinner = document.getElementById('submitSpinner');
-        submitBtn.disabled = true;
-        spinner.classList.remove('hidden');
+        
+        if (submitBtn) submitBtn.disabled = true;
+        if (spinner) spinner.classList.remove('hidden');
         
         const { data, error } = await supabaseClient
             .from('reports')
@@ -211,8 +236,11 @@ async function submitReport(formData) {
         alert(`❌ Gagal mengirim: ${error.message}`);
     } finally {
         showLoading(false);
-        submitBtn.disabled = false;
-        spinner.classList.add('hidden');
+        const submitBtn = document.querySelector('#formLapor button[type="submit"]');
+        const spinner = document.getElementById('submitSpinner');
+        
+        if (submitBtn) submitBtn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
     }
 }
 
@@ -233,66 +261,78 @@ async function deleteReport(reportId) {
 
 // Map Management
 function initMap() {
-    map = L.map('map').setView([userLocation.lat, userLocation.lng], 13);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap',
-        maxZoom: 19
-    }).addTo(map);
-    
-    updateUserMarker();
-    console.log('✅ Map initialized');
+    try {
+        map = L.map('map').setView([userLocation.lat, userLocation.lng], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+        
+        updateUserMarker();
+        console.log('✅ Map initialized');
+    } catch (error) {
+        console.error('❌ Error initializing map:', error);
+    }
 }
 
 function updateUserMarker() {
-    if (userMarker) {
-        userMarker.setLatLng([userLocation.lat, userLocation.lng]);
-    } else {
-        userMarker = L.circleMarker([userLocation.lat, userLocation.lng], {
-            radius: 8,
-            fillColor: '#3B82F6',
-            color: '#1E40AF',
-            weight: 3,
-            opacity: 1,
-            fillOpacity: 0.8
-        }).addTo(map);
-        
-        userMarker.bindPopup('<strong>📍 Lokasi Anda</strong>');
+    try {
+        if (userMarker) {
+            userMarker.setLatLng([userLocation.lat, userLocation.lng]);
+        } else {
+            userMarker = L.circleMarker([userLocation.lat, userLocation.lng], {
+                radius: 8,
+                fillColor: '#3B82F6',
+                color: '#1E40AF',
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map);
+            
+            userMarker.bindPopup('<strong>📍 Lokasi Anda</strong>');
+        }
+    } catch (error) {
+        console.error('❌ Error updating user marker:', error);
     }
 }
 
 function addReportToMap(report) {
     if (currentReports.has(report.id)) return;
     
-    const icon = categoryIcons[report.kategori] || '❓';
-    const color = categoryColors[report.kategori] || '#6B7280';
-    
-    const marker = L.circleMarker([report.latitude, report.longitude], {
-        radius: 10,
-        fillColor: color,
-        color: color,
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
-    }).addTo(map);
-    
-    const popupContent = `
-        <div style="width: 250px">
-            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px">${icon} ${report.kategori.toUpperCase()}</div>
-            <p style="margin-bottom: 12px">${report.deskripsi}</p>
-            ${report.foto_url ? `<img src="${report.foto_url}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px">` : ''}
-            <div style="font-size: 12px; color: #666; margin-bottom: 8px">
-                <div>📍 ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</div>
-                <div>⏰ ${new Date(report.created_at).toLocaleString('id-ID')}</div>
+    try {
+        const icon = categoryIcons[report.kategori] || '❓';
+        const color = categoryColors[report.kategori] || '#6B7280';
+        
+        const marker = L.circleMarker([report.latitude, report.longitude], {
+            radius: 10,
+            fillColor: color,
+            color: color,
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(map);
+        
+        const popupContent = `
+            <div style="width: 250px">
+                <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px">${icon} ${report.kategori.toUpperCase()}</div>
+                <p style="margin-bottom: 12px">${report.deskripsi}</p>
+                ${report.foto_url ? `<img src="${report.foto_url}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px">` : ''}
+                <div style="font-size: 12px; color: #666; margin-bottom: 8px">
+                    <div>📍 ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</div>
+                    <div>⏰ ${new Date(report.created_at).toLocaleString('id-ID')}</div>
+                </div>
+                <button class="report-detail-btn" data-id="${report.id}" style="background: #EF4444; color: white; padding: 8px; border-radius: 6px; width: 100%; border: none; cursor: pointer">
+                    Lihat Detail
+                </button>
             </div>
-            <button class="report-detail-btn" data-id="${report.id}" style="background: #EF4444; color: white; padding: 8px; border-radius: 6px; width: 100%; border: none; cursor: pointer">
-                Lihat Detail
-            </button>
-        </div>
-    `;
-    
-    marker.bindPopup(popupContent);
-    currentReports.set(report.id, { marker, data: report });
+        `;
+        
+        marker.bindPopup(popupContent);
+        currentReports.set(report.id, { marker, data: report });
+    } catch (error) {
+        console.error('❌ Error adding report to map:', error);
+    }
 }
 
 function updateReportMarker(report) {
@@ -310,7 +350,10 @@ function removeReportMarker(reportId) {
 
 // Geolocation
 function getUserLocation() {
-    if (!('geolocation' in navigator)) return;
+    if (!('geolocation' in navigator)) {
+        console.warn('⚠️ Geolocation not supported');
+        return;
+    }
     
     navigator.geolocation.watchPosition(
         (position) => {
@@ -353,7 +396,8 @@ function setupCloudinaryUpload() {
         const file = e.target.files[0];
         if (file) {
             userCurrentFile = file;
-            document.getElementById('fileName').textContent = `📄 ${file.name}`;
+            const fileName = document.getElementById('fileName');
+            if (fileName) fileName.textContent = `📄 ${file.name}`;
         }
     });
     
@@ -374,7 +418,8 @@ function setupCloudinaryUpload() {
         if (file && file.type.startsWith('image/')) {
             userCurrentFile = file;
             fileInput.files = e.dataTransfer.files;
-            document.getElementById('fileName').textContent = `📄 ${file.name}`;
+            const fileName = document.getElementById('fileName');
+            if (fileName) fileName.textContent = `📄 ${file.name}`;
         }
     });
 }
@@ -409,24 +454,49 @@ async function uploadImageToCloudinary(file) {
 
 // Form Handling
 function setupEventListeners() {
-    document.getElementById('btnLapor')?.addEventListener('click', () => openModal('modalLapor'));
-    document.getElementById('btnSettings')?.addEventListener('click', () => openModal('modalSettings'));
-    document.getElementById('btnBatal')?.addEventListener('click', () => closeModal('modalLapor'));
-    document.getElementById('btnCloseSettings')?.addEventListener('click', () => closeModal('modalSettings'));
-    document.getElementById('btnCloseInfo')?.addEventListener('click', () => closeModal('modalInfo'));
-    document.getElementById('btnSaveSettings')?.addEventListener('click', saveSettings);
-    document.getElementById('formLapor')?.addEventListener('submit', handleFormSubmit);
+    // Button listeners
+    const btnLapor = document.getElementById('btnLapor');
+    const btnSettings = document.getElementById('btnSettings');
+    const btnBatal = document.getElementById('btnBatal');
+    const btnCloseSettings = document.getElementById('btnCloseSettings');
+    const btnCloseSettingsX = document.getElementById('btnCloseSettingsX');
+    const btnCloseInfo = document.getElementById('btnCloseInfo');
+    const btnSaveSettings = document.getElementById('btnSaveSettings');
+    const btnDeleteReport = document.getElementById('btnDeleteReport');
+    const formLapor = document.getElementById('formLapor');
     
-    document.getElementById('btnDeleteReport')?.addEventListener('click', () => {
-        const reportId = document.getElementById('btnDeleteReport').dataset.reportId;
-        if (reportId) deleteReport(reportId);
-    });
+    if (btnLapor) btnLapor.addEventListener('click', () => openModal('modalLapor'));
+    if (btnSettings) btnSettings.addEventListener('click', () => openModal('modalSettings'));
+    if (btnBatal) btnBatal.addEventListener('click', () => closeModal('modalLapor'));
+    if (btnCloseSettings) btnCloseSettings.addEventListener('click', () => closeModal('modalSettings'));
+    if (btnCloseSettingsX) btnCloseSettingsX.addEventListener('click', () => closeModal('modalSettings'));
+    if (btnCloseInfo) btnCloseInfo.addEventListener('click', () => closeModal('modalInfo'));
+    if (btnSaveSettings) btnSaveSettings.addEventListener('click', saveSettings);
+    if (formLapor) formLapor.addEventListener('submit', handleFormSubmit);
+    
+    if (btnDeleteReport) {
+        btnDeleteReport.addEventListener('click', () => {
+            const reportId = btnDeleteReport.dataset.reportId;
+            if (reportId) deleteReport(reportId);
+        });
+    }
     
     setupCloudinaryUpload();
     
+    // Event delegation for report detail buttons
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('report-detail-btn')) {
             showReportDetail(e.target.dataset.id);
+        }
+    });
+    
+    // Close modals when clicking outside
+    ['modalLapor', 'modalInfo', 'modalSettings'].forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal(modalId);
+            });
         }
     });
     
@@ -436,8 +506,8 @@ function setupEventListeners() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
-    const kategori = document.getElementById('kategori').value;
-    const deskripsi = document.getElementById('deskripsi').value;
+    const kategori = document.getElementById('kategori')?.value;
+    const deskripsi = document.getElementById('deskripsi')?.value;
     
     if (!kategori || !deskripsi) {
         alert('⚠️ Kategori dan deskripsi harus diisi!');
@@ -511,24 +581,19 @@ function showReportDetail(reportId) {
 // Modal Management
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        console.log(`✅ Opened modal: ${modalId}`);
+    }
 }
 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+        console.log(`✅ Closed modal: ${modalId}`);
+    }
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    ['modalLapor', 'modalInfo', 'modalSettings'].forEach(modalId => {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal(modalId);
-            });
-        }
-    });
-});
 
 // Utility
 function showLoading(show) {
