@@ -1,5 +1,5 @@
 /* ==========================================
-   Info 24 Jam - Main Application JS
+   Info 24 Jam - Main Application JS (FIXED)
    ========================================== */
 
 // ==========================================
@@ -120,7 +120,12 @@ function initSupabase() {
     }
     
     try {
-        // Tambahkan 'window.' di depan supabase.createClient
+        // FIX: Cek apakah window.supabase tersedia
+        if (typeof window.supabase === 'undefined') {
+            console.error('❌ Supabase library belum ter-load! Pastikan script Supabase di-load sebelum app.js');
+            return;
+        }
+        
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         console.log('✅ Supabase initialized');
         
@@ -193,10 +198,9 @@ async function submitReport(formData) {
     
     try {
         showLoading(true);
-        document.querySelector('#formLapor button[type="submit"]').disabled = true;
-        
         const submitBtn = document.querySelector('#formLapor button[type="submit"]');
         const spinner = document.getElementById('submitSpinner');
+        submitBtn.disabled = true;
         spinner.classList.remove('hidden');
         
         // Insert to Supabase
@@ -217,8 +221,8 @@ async function submitReport(formData) {
         alert(`❌ Gagal mengirim laporan: ${error.message}`);
     } finally {
         showLoading(false);
-        document.querySelector('#formLapor button[type="submit"]').disabled = false;
-        document.getElementById('submitSpinner').classList.add('hidden');
+        submitBtn.disabled = false;
+        spinner.classList.add('hidden');
     }
 }
 
@@ -428,7 +432,6 @@ async function uploadImageToCloudinary(file) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', CLOUDINARY_PRESET);
-        formData.append('cloud_name', CLOUDINARY_CLOUD);
         
         const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
             method: 'POST',
