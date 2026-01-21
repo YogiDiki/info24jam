@@ -1,52 +1,32 @@
 {
-  "name": "Info 24 Jam by Emydn Group",
-  "short_name": "Info 24 Jam",
-  "description": "Platform crowdsourcing darurat real-time untuk berbagi informasi banjir, kecelakaan, kebakaran, dan kejadian darurat lainnya",
+  "name": "Info 24 Jam - Lapor Darurat",
+  "short_name": "Info24Jam",
+  "description": "Platform crowdsourcing darurat real-time untuk warga",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#EF4444",
   "theme_color": "#EF4444",
   "orientation": "portrait-primary",
-  "scope": "/",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "icons/icon-192-maskable.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icons/icon-512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512-maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["emergency", "utilities"],
+  "categories": ["social", "utilities", "news"],
   "screenshots": [
     {
-      "src": "icons/screenshot-1.png",
+      "src": "/screenshots/screenshot1.png",
       "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "icons/screenshot-2.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
+      "type": "image/png"
     }
   ],
   "shortcuts": [
@@ -54,30 +34,15 @@
       "name": "Buat Laporan",
       "short_name": "Lapor",
       "description": "Buat laporan darurat baru",
-      "url": "/?shortcut=lapor",
+      "url": "/?action=report",
       "icons": [
         {
-          "src": "icons/lapor-icon.png",
-          "sizes": "192x192",
-          "type": "image/png"
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
         }
       ]
     }
   ],
-  "share_target": {
-    "action": "/share",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url",
-      "files": [
-        {
-          "name": "media",
-          "accept": ["image/*"]
-        }
-      ]
-    }
-  }
+  "related_applications": [],
+  "prefer_related_applications": false
 }

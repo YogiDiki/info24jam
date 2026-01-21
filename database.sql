@@ -1,174 +1,140 @@
 -- ==========================================
--- Info 24 Jam Database Schema
--- Supabase PostgreSQL Migration
+-- Info 24 Jam - Database Schema
+-- Supabase PostgreSQL
 -- ==========================================
 
--- ==========================================
 -- 1. Create reports table
--- ==========================================
 CREATE TABLE IF NOT EXISTS public.reports (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  
-  -- Report Details
-  kategori TEXT NOT NULL CHECK (kategori IN ('banjir', 'kebakaran', 'kecelakaan', 'kriminal', 'macet', 'lainnya')),
-  deskripsi TEXT NOT NULL,
-  
-  -- Location
-  latitude DECIMAL(10, 8) NOT NULL,
-  longitude DECIMAL(11, 8) NOT NULL,
-  
-  -- Media
-  foto_url TEXT,
-  
-  -- Timestamps
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  
-  -- Metadata
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'resolved', 'archived')),
-  views_count INTEGER DEFAULT 0
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    kategori VARCHAR(50) NOT NULL,
+    deskripsi TEXT NOT NULL,
+    latitude DECIMAL(10, 8) NOT NULL,
+    longitude DECIMAL(11, 8) NOT NULL,
+    foto_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ==========================================
--- 2. Create indexes for performance
--- ==========================================
-CREATE INDEX IF NOT EXISTS idx_reports_kategori ON public.reports(kategori);
-CREATE INDEX IF NOT EXISTS idx_reports_created_at ON public.reports(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_reports_status ON public.reports(status);
-CREATE INDEX IF NOT EXISTS idx_reports_location ON public.reports USING GIST (
-  ll_to_earth(latitude, longitude)
-);
-
--- ==========================================
--- 3. Create RLS Policies (Optional, for security)
--- ==========================================
-
--- Enable Row Level Security
+-- 2. Enable Row Level Security (RLS)
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
--- Everyone can view reports
-CREATE POLICY "Allow public select" ON public.reports
-  FOR SELECT USING (true);
+-- 3. Policy: Anyone can read reports
+CREATE POLICY "Anyone can view reports" 
+ON public.reports 
+FOR SELECT 
+USING (true);
 
--- Anyone can insert reports (crowdsourcing)
-CREATE POLICY "Allow public insert" ON public.reports
-  FOR INSERT WITH CHECK (true);
+-- 4. Policy: Anyone can create reports
+CREATE POLICY "Anyone can create reports" 
+ON public.reports 
+FOR INSERT 
+WITH CHECK (true);
 
--- Allow users to update their own reports (within 24 hours)
-CREATE POLICY "Allow update recent reports" ON public.reports
-  FOR UPDATE 
-  USING (created_at > NOW() - INTERVAL '24 hours')
-  WITH CHECK (created_at > NOW() - INTERVAL '24 hours');
+-- 5. Policy: Anyone can delete reports (untuk sekarang, nanti kita batasi untuk admin)
+-- Ini akan kita update setelah setup admin
+CREATE POLICY "Anyone can delete reports" 
+ON public.reports 
+FOR DELETE 
+USING (true);
 
--- Allow delete recent reports
-CREATE POLICY "Allow delete recent reports" ON public.reports
-  FOR DELETE
-  USING (created_at > NOW() - INTERVAL '24 hours');
+-- 6. Create index for faster queries
+CREATE INDEX idx_reports_created_at ON public.reports (created_at DESC);
+CREATE INDEX idx_reports_kategori ON public.reports (kategori);
 
--- ==========================================
--- 4. Enable Realtime
--- ==========================================
+-- 7. Enable Realtime for this table
 ALTER PUBLICATION supabase_realtime ADD TABLE public.reports;
 
 -- ==========================================
--- 5. Create function for auto-update timestamp
+-- AUTO-DELETE FUNCTION (Hapus laporan > 7 hari)
 -- ==========================================
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+
+-- Function to delete old reports
+CREATE OR REPLACE FUNCTION delete_old_reports()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
+  DELETE FROM public.reports
+  WHERE created_at < NOW() - INTERVAL '7 days';
+  
+  RAISE NOTICE 'Deleted reports older than 7 days';
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Attach trigger
-DROP TRIGGER IF EXISTS trigger_update_updated_at ON public.reports;
-CREATE TRIGGER trigger_update_updated_at
-  BEFORE UPDATE ON public.reports
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Create a cron job to run daily at midnight (requires pg_cron extension)
+-- Note: pg_cron mungkin tidak tersedia di Supabase Free Tier
+-- Alternatif: gunakan Supabase Edge Functions atau external cron
 
 -- ==========================================
--- 6. Create view for recent reports (last 7 days)
--- ==========================================
-CREATE OR REPLACE VIEW public.recent_reports AS
-SELECT * FROM public.reports
-WHERE created_at > NOW() - INTERVAL '7 days'
-  AND status = 'active'
-ORDER BY created_at DESC;
-
--- ==========================================
--- 7. Create function for distance search
--- ==========================================
-CREATE OR REPLACE FUNCTION search_reports_by_distance(
-  user_lat DECIMAL,
-  user_lng DECIMAL,
-  distance_km FLOAT DEFAULT 5
-)
-RETURNS TABLE(
-  id UUID,
-  kategori TEXT,
-  deskripsi TEXT,
-  latitude DECIMAL,
-  longitude DECIMAL,
-  foto_url TEXT,
-  created_at TIMESTAMP WITH TIME ZONE,
-  distance_m FLOAT
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    r.id,
-    r.kategori,
-    r.deskripsi,
-    r.latitude,
-    r.longitude,
-    r.foto_url,
-    r.created_at,
-    earth_distance(ll_to_earth(user_lat, user_lng), ll_to_earth(r.latitude, r.longitude))::FLOAT as distance_m
-  FROM public.reports r
-  WHERE earth_distance(ll_to_earth(user_lat, user_lng), ll_to_earth(r.latitude, r.longitude)) < (distance_km * 1000)
-    AND r.status = 'active'
-  ORDER BY distance_m ASC;
-END;
-$$ LANGUAGE plpgsql;
-
--- ==========================================
--- 8. Sample data (optional, for testing)
--- ==========================================
-INSERT INTO public.reports (kategori, deskripsi, latitude, longitude, foto_url, status)
-VALUES 
-  ('banjir', 'Banjir di Jl. Sudirman, ketinggian air mencapai 1.5 meter', -6.2088, 106.8456, NULL, 'active'),
-  ('kebakaran', 'Kebakaran di gedung apartemen, 10 mobil pemadam sudah didatangkan', -6.2100, 106.8500, NULL, 'active'),
-  ('kecelakaan', 'Tabrakan 3 kendaraan di Tol dalam kota, lalu lintas macet', -6.2000, 106.8400, NULL, 'active')
-ON CONFLICT DO NOTHING;
-
--- ==========================================
--- 9. Stats and monitoring queries
+-- ADMIN TABLE (untuk kontrol hapus manual)
 -- ==========================================
 
--- Get reports count by category
--- SELECT kategori, COUNT(*) as count FROM public.reports GROUP BY kategori;
+-- Create admins table
+CREATE TABLE IF NOT EXISTS public.admins (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL, -- Gunakan bcrypt hash
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Get reports from last 24 hours
--- SELECT * FROM public.reports WHERE created_at > NOW() - INTERVAL '1 day' ORDER BY created_at DESC;
+-- Enable RLS for admins
+ALTER TABLE public.admins ENABLE ROW LEVEL SECURITY;
 
--- Get reports with photos only
--- SELECT * FROM public.reports WHERE foto_url IS NOT NULL ORDER BY created_at DESC;
+-- Policy: Only authenticated users can read admins
+CREATE POLICY "Only authenticated can view admins" 
+ON public.admins 
+FOR SELECT 
+USING (auth.role() = 'authenticated');
+
+-- Insert default admin (password: admin123)
+-- PENTING: Ganti password ini setelah deployment!
+INSERT INTO public.admins (email, password_hash) 
+VALUES ('admin@info24jam.com', '$2a$10$rKzVGPZQcWvJXVjZXVjZXe7Z7Z7Z7Z7Z7Z7Z7Z7Z7Z7Z7Z7Z7Z7');
 
 -- ==========================================
--- Notes:
--- 
--- 1. RLS Policies: Uncomment if you want to restrict access. 
---    Currently allows public read/write (crowdsourcing model).
--- 
--- 2. Realtime: Make sure to enable Realtime in Supabase dashboard
---    after running this migration: Database → Replication
--- 
--- 3. Functions: earth_distance() requires pgvector/earthdistance extension
---    Make sure it's enabled in your Supabase project.
--- 
--- 4. Status field: Track if report is active/resolved/archived
--- 
--- 5. Views count: Track popularity of reports (optional)
+-- ALTERNATIVE: Auto-delete via Edge Function
 -- ==========================================
+
+-- Jika pg_cron tidak tersedia, buat Edge Function yang dipanggil oleh cron job eksternal
+-- File: supabase/functions/cleanup-old-reports/index.ts
+
+/*
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+serve(async (req) => {
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
+
+  const { error } = await supabaseClient
+    .from('reports')
+    .delete()
+    .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  return new Response(JSON.stringify({ success: true, message: 'Old reports deleted' }), {
+    headers: { 'Content-Type': 'application/json' }
+  })
+})
+*/
+
+-- Kemudian setup cron job di cron-job.org atau GitHub Actions untuk memanggil edge function setiap hari
+
+-- ==========================================
+-- NOTES FOR PRODUCTION
+-- ==========================================
+
+-- 1. Ganti password admin di tabel admins
+-- 2. Setup cron job untuk auto-delete (gunakan cron-job.org jika pg_cron tidak ada)
+-- 3. Update RLS policy untuk delete - hanya admin yang bisa hapus
+-- 4. Backup database secara berkala
+-- 5. Monitor storage Cloudinary agar tidak penuh

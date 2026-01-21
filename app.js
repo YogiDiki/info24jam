@@ -19,6 +19,8 @@ let supabaseClient;
 let currentReports = new Map();
 let userCurrentFile = null;
 let currentView = 'map'; // 'map' or 'list'
+let isAdmin = false;
+let deferredPrompt = null; // For PWA install
 
 const categoryIcons = {
     banjir: '🌊',
@@ -98,6 +100,8 @@ async function initApp() {
     getUserLocation();
     setupEventListeners();
     loadReports();
+    setupPWA();
+    checkAdminStatus();
     
     console.log('✅ App initialized successfully!');
 }
@@ -258,6 +262,12 @@ async function submitReport(formData) {
 async function deleteReport(reportId) {
     if (!supabaseClient) {
         showToast('Database belum terhubung!', 'error');
+        return;
+    }
+    
+    // Check if user is admin
+    if (!isAdmin) {
+        showToast('Hanya admin yang bisa menghapus laporan!', 'error');
         return;
     }
     
@@ -605,11 +615,22 @@ function setupEventListeners() {
         document.getElementById('legendBox').classList.add('hidden');
     });
     document.getElementById('btnCloseList')?.addEventListener('click', toggleView);
+    document.getElementById('btnAdmin')?.addEventListener('click', () => {
+        if (isAdmin) {
+            if (confirm('Logout sebagai admin?')) {
+                adminLogout();
+            }
+        } else {
+            openModal('modalAdmin');
+        }
+    });
     
     // Modal buttons
     document.getElementById('btnBatal')?.addEventListener('click', () => closeModal('modalLapor'));
     document.getElementById('btnCloseInfo')?.addEventListener('click', () => closeModal('modalInfo'));
+    document.getElementById('btnCancelAdmin')?.addEventListener('click', () => closeModal('modalAdmin'));
     document.getElementById('formLapor')?.addEventListener('submit', handleFormSubmit);
+    document.getElementById('formAdminLogin')?.addEventListener('submit', handleAdminLogin);
     
     document.getElementById('btnDeleteReport')?.addEventListener('click', () => {
         const reportId = document.getElementById('btnDeleteReport').dataset.reportId;
@@ -629,7 +650,7 @@ function setupEventListeners() {
     });
     
     // Close modal when clicking outside
-    ['modalLapor', 'modalInfo'].forEach(modalId => {
+    ['modalLapor', 'modalInfo', 'modalAdmin'].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', (e) => {
@@ -726,7 +747,15 @@ function showReportDetail(reportId) {
     if (infoContent) infoContent.innerHTML = content;
     
     const deleteBtn = document.getElementById('btnDeleteReport');
-    if (deleteBtn) deleteBtn.dataset.reportId = reportId;
+    if (deleteBtn) {
+        deleteBtn.dataset.reportId = reportId;
+        // Show/hide delete button based on admin status
+        if (isAdmin) {
+            deleteBtn.classList.remove('hidden');
+        } else {
+            deleteBtn.classList.add('hidden');
+        }
+    }
     
     openModal('modalInfo');
 }
@@ -781,6 +810,161 @@ function formatTimeAgo(dateString) {
 
 // Make showReportDetail global for onclick
 window.showReportDetail = showReportDetail;
+
+// ==================== PWA INSTALLATION ====================
+
+function setupPWA() {
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Show install prompt after 10 seconds
+        setTimeout(() => {
+            showInstallPrompt();
+        }, 10000);
+    });
+    
+    // Check if already installed
+    window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA installed successfully');
+        showToast('Aplikasi berhasil diinstall!', 'success');
+        hideInstallPrompt();
+        deferredPrompt = null;
+    });
+    
+    // Setup install buttons
+    const btnInstall = document.getElementById('btnInstallApp');
+    const btnInstallLater = document.getElementById('btnInstallLater');
+    const btnCloseInstall = document.getElementById('btnCloseInstall');
+    
+    if (btnInstall) {
+        btnInstall.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('✅ User accepted install');
+                showToast('Menginstall aplikasi...', 'info');
+            } else {
+                console.log('❌ User dismissed install');
+            }
+            
+            hideInstallPrompt();
+            deferredPrompt = null;
+        });
+    }
+    
+    if (btnInstallLater) {
+        btnInstallLater.addEventListener('click', () => {
+            hideInstallPrompt();
+            // Show again after 1 day
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            localStorage.setItem('installPromptDismissed', tomorrow.toISOString());
+        });
+    }
+    
+    if (btnCloseInstall) {
+        btnCloseInstall.addEventListener('click', hideInstallPrompt);
+    }
+}
+
+function showInstallPrompt() {
+    // Check if dismissed recently
+    const dismissed = localStorage.getItem('installPromptDismissed');
+    if (dismissed && new Date(dismissed) > new Date()) {
+        return;
+    }
+    
+    // Check if standalone (already installed)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        return;
+    }
+    
+    const prompt = document.getElementById('installPrompt');
+    if (prompt) {
+        prompt.classList.remove('hidden');
+    }
+}
+
+function hideInstallPrompt() {
+    const prompt = document.getElementById('installPrompt');
+    if (prompt) {
+        prompt.classList.add('hidden');
+    }
+}
+
+// ==================== ADMIN AUTHENTICATION ====================
+
+function checkAdminStatus() {
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+        isAdmin = true;
+        updateAdminUI();
+    }
+}
+
+async function handleAdminLogin(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('adminEmail').value;
+    const password = document.getElementById('adminPassword').value;
+    
+    if (!supabaseClient) {
+        showToast('Database belum terhubung!', 'error');
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        // Simple auth check (dalam production, gunakan proper auth)
+        // Untuk sekarang, hardcode admin credentials
+        if (email === 'admin@info24jam.com' && password === 'admin123') {
+            isAdmin = true;
+            localStorage.setItem('adminToken', 'admin_session_' + Date.now());
+            
+            showToast('Login berhasil! Anda sekarang Admin', 'success');
+            closeModal('modalAdmin');
+            updateAdminUI();
+            loadReports(); // Reload untuk show delete buttons
+        } else {
+            showToast('Email atau password salah!', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Admin login error:', error);
+        showToast('Login gagal', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function updateAdminUI() {
+    const btnAdmin = document.getElementById('btnAdmin');
+    if (btnAdmin && isAdmin) {
+        btnAdmin.innerHTML = '👑 Admin';
+        btnAdmin.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
+        btnAdmin.classList.remove('bg-red-700', 'hover:bg-red-800');
+    }
+}
+
+function adminLogout() {
+    isAdmin = false;
+    localStorage.removeItem('adminToken');
+    
+    const btnAdmin = document.getElementById('btnAdmin');
+    if (btnAdmin) {
+        btnAdmin.innerHTML = '🔐';
+        btnAdmin.classList.remove('bg-yellow-600', 'hover:bg-yellow-700');
+        btnAdmin.classList.add('bg-red-700', 'hover:bg-red-800');
+    }
+    
+    showToast('Logout berhasil', 'info');
+    loadReports(); // Reload untuk hide delete buttons
+}
 
 // ==================== START APP ====================
 
