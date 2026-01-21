@@ -1,0 +1,46 @@
+{
+  "name": "info24jam",
+  "version": "1.0.0",
+  "description": "Platform crowdsourcing darurat real-time untuk berbagi informasi banjir, kecelakaan, kebakaran, dll secara real-time",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "dev:secure": "npx http-server -c-1 --https",
+    "deploy:vercel": "vercel",
+    "deploy:netlify": "netlify deploy --prod --dir=.",
+    "build": "echo 'This is a static site, no build needed'",
+    "test": "echo 'Add tests here'",
+    "lint": "echo 'Add linting here'"
+  },
+  "keywords": [
+    "pwa",
+    "crowdsourcing",
+    "emergency",
+    "real-time",
+    "leaflet",
+    "supabase",
+    "cloudinary",
+    "indonesia"
+  ],
+  "author": "Emydn Group",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "vercel": "^33.0.0",
+    "netlify-cli": "^17.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "leaflet": "^1.9.4",
+    "cloudinary-core": "^2.13.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/info24jam"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/info24jam/issues"
+  },
+  "homepage": "https://github.com/yourusername/info24jam#readme"
+}

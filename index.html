@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Info 24 Jam - Platform crowdsourcing darurat real-time">
+    <meta name="theme-color" content="#EF4444">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Info 24 Jam">
+    
+    <title>Info 24 Jam - Lapor Darurat Real-Time</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Main Container -->
+    <div id="app" class="h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-red-600 to-red-500 text-white p-4 shadow-lg z-10">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">📍 Info 24 Jam</h1>
+                    <p class="text-sm text-red-100">by Emydn Group</p>
+                </div>
+                <button id="btnSettings" class="bg-red-700 hover:bg-red-800 p-2 rounded-lg transition">
+                    ⚙️ Pengaturan
+                </button>
+            </div>
+        </header>
+
+        <!-- Map Container -->
+        <div id="map" class="flex-1"></div>
+
+        <!-- Floating Action Button -->
+        <button id="btnLapor" class="fixed bottom-8 right-8 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl p-4 transition transform hover:scale-110 z-20" title="Buat Laporan Baru">
+            📢 Lapor Darurat
+        </button>
+
+        <!-- Loading Indicator -->
+        <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-red-500 animate-pulse opacity-0 z-30" style="transition: opacity 0.3s;"></div>
+    </div>
+
+    <!-- Modal: Form Lapor -->
+    <div id="modalLapor" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-40">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-red-600 to-red-500 text-white p-6 sticky top-0">
+                <h2 class="text-2xl font-bold">Buat Laporan Darurat</h2>
+                <p class="text-sm text-red-100">Lokasi akan diambil otomatis dari GPS Anda</p>
+            </div>
+
+            <form id="formLapor" class="p-6 space-y-4">
+                <!-- Kategori -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Kategori Darurat *</label>
+                    <select id="kategori" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" required>
+                        <option value="">-- Pilih Kategori --</option>
+                        <option value="banjir">🌊 Banjir</option>
+                        <option value="kebakaran">🔥 Kebakaran</option>
+                        <option value="kecelakaan">🚗 Kecelakaan</option>
+                        <option value="kriminal">⚠️ Kriminal</option>
+                        <option value="macet">🚦 Kemacetan</option>
+                        <option value="lainnya">❓ Lainnya</option>
+                    </select>
+                </div>
+
+                <!-- Deskripsi -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi Detail *</label>
+                    <textarea id="deskripsi" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent h-24 resize-none" placeholder="Jelaskan situasi darurat dengan detail..." required></textarea>
+                </div>
+
+                <!-- Lokasi Display -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-xs text-gray-600 font-semibold">📍 Lokasi Anda:</p>
+                    <p id="lokasi" class="text-sm text-gray-800 font-mono mt-1">Mengambil koordinat...</p>
+                </div>
+
+                <!-- Photo Upload -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">📸 Unggah Foto (Opsional)</label>
+                    <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-red-500 transition">
+                        <p class="text-sm text-gray-600">Klik atau drag foto di sini</p>
+                        <input type="file" id="fileInput" class="hidden" accept="image/*">
+                        <p id="fileName" class="text-xs text-gray-500 mt-2"></p>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="btnBatal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                        <span>📤 Kirim Laporan</span>
+                        <span id="submitSpinner" class="hidden animate-spin">⏳</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Info Laporan -->
+    <div id="modalInfo" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-40">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div id="infoContent" class="p-6">
+                <!-- Akan diisi oleh JavaScript -->
+            </div>
+            <div class="bg-gray-100 p-4 flex gap-3 rounded-b-2xl">
+                <button id="btnCloseInfo" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg transition">
+                    Tutup
+                </button>
+                <button id="btnDeleteReport" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition">
+                    🗑️ Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Pengaturan -->
+    <div id="modalSettings" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-40">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div class="bg-gradient-to-r from-red-600 to-red-500 text-white p-6">
+                <h2 class="text-2xl font-bold">Pengaturan</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">URL Supabase</label>
+                    <input type="text" id="supabaseUrl" class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-xs" placeholder="https://your-project.supabase.co">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Supabase Anon Key</label>
+                    <input type="password" id="supabaseKey" class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-xs" placeholder="Your anon public key">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Cloudinary Cloud Name</label>
+                    <input type="text" id="cloudinaryCloud" class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-xs" placeholder="your_cloud_name">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Cloudinary Upload Preset</label>
+                    <input type="text" id="cloudinaryPreset" class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-xs" placeholder="your_upload_preset (Unsigned)">
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p class="text-xs text-yellow-800"><strong>⚠️ Catatan:</strong> Kredensial disimpan di localStorage browser Anda saja.</p>
+                </div>
+            </div>
+            <div class="bg-gray-100 p-4 flex gap-3 rounded-b-2xl">
+                <button id="btnCloseSettings" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 rounded-lg transition">
+                    Tutup
+                </button>
+                <button id="btnSaveSettings" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition">
+                    💾 Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloudinary Widget -->
+    <script src="https://widget.cloudinary.com/v2.0/cloudinary-core.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0/+esm"></script>
+
+    <!-- Main App JS -->
+    <script src="app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('Service Worker registration failed:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
