@@ -11,7 +11,7 @@ let CLOUDINARY_PRESET = localStorage.getItem('cloudinaryPreset') || '';
 let map;
 let userMarker;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
-let supabase;
+let supabaseClient;
 let currentReports = new Map();
 let userCurrentFile = null;
 
@@ -127,7 +127,7 @@ function initSupabase() {
             return;
         }
         
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         console.log('✅ Supabase initialized');
         setupRealtimeListener();
     } catch (error) {
@@ -136,9 +136,9 @@ function initSupabase() {
 }
 
 function setupRealtimeListener() {
-    if (!supabase) return;
+    if (!supabaseClient) return;
     
-    supabase
+    supabaseClient
         .channel('public:reports')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, (payload) => {
             console.log('📡 Real-time update:', payload);
@@ -155,7 +155,7 @@ function setupRealtimeListener() {
 }
 
 async function loadReports() {
-    if (!supabase) {
+    if (!supabaseClient) {
         console.warn('⚠️ Supabase not initialized');
         return;
     }
@@ -163,7 +163,7 @@ async function loadReports() {
     try {
         showLoading(true);
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('reports')
             .select('*')
             .order('created_at', { ascending: false });
@@ -182,7 +182,7 @@ async function loadReports() {
 }
 
 async function submitReport(formData) {
-    if (!supabase) {
+    if (!supabaseClient) {
         alert('❌ Supabase belum dikonfigurasi!');
         return;
     }
@@ -194,7 +194,7 @@ async function submitReport(formData) {
         submitBtn.disabled = true;
         spinner.classList.remove('hidden');
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('reports')
             .insert([formData])
             .select();
@@ -217,10 +217,10 @@ async function submitReport(formData) {
 }
 
 async function deleteReport(reportId) {
-    if (!supabase || !confirm('🗑️ Hapus laporan ini?')) return;
+    if (!supabaseClient || !confirm('🗑️ Hapus laporan ini?')) return;
     
     try {
-        const { error } = await supabase.from('reports').delete().eq('id', reportId);
+        const { error } = await supabaseClient.from('reports').delete().eq('id', reportId);
         if (error) throw error;
         
         alert('✅ Laporan berhasil dihapus');
