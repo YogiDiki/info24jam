@@ -58,6 +58,10 @@
             z-index: 20;
         }
         
+        .bottom-nav {
+            z-index: 25;
+        }
+        
         .legend-box {
             z-index: 15;
         }
@@ -143,14 +147,117 @@
             border: 2px solid rgba(0,0,0,0.2);
         }
         
-        /* List view styles */
+        /* List view styles - IMPROVED */
         .report-card {
             transition: all 0.2s;
+            cursor: pointer;
         }
         
         .report-card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        
+        .report-card:active {
+            transform: translateY(0);
+        }
+        
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+            color: #6B7280;
+        }
+        
+        .nav-item.active {
+            color: #EF4444;
+        }
+        
+        .nav-item:hover {
+            background-color: #FEE2E2;
+        }
+        
+        /* Stats Card */
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Contact Card */
+        .contact-card {
+            transition: all 0.2s;
+        }
+        
+        .contact-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Zone Card */
+        .zone-card {
+            transition: all 0.2s;
+            border-left: 4px solid;
+        }
+        
+        .zone-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        
+        /* Admin Floating Menu */
+        .admin-menu {
+            position: fixed;
+            bottom: 80px;
+            right: 8px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transform: scale(0);
+            transform-origin: bottom right;
+            transition: transform 0.2s;
+        }
+        
+        .admin-menu.show {
+            transform: scale(1);
+        }
+        
+        .admin-menu-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .admin-menu-item:hover {
+            background: #F3F4F6;
         }
     </style>
 </head>
@@ -165,9 +272,6 @@
                     <p class="text-sm text-red-100">by Emydn Group</p>
                 </div>
                 <div class="flex gap-2">
-                    <button id="btnToggleView" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg transition duration-200 font-semibold">
-                        📋 List
-                    </button>
                     <button id="btnToggleLegend" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg transition duration-200 font-semibold">
                         🎨 Legend
                     </button>
@@ -222,26 +326,36 @@
         </div>
 
         <!-- List View Panel -->
-        <div id="listPanel" class="fixed inset-0 bg-white z-50 hidden overflow-y-auto">
+        <div id="listPanel" class="fixed inset-0 bg-gray-50 z-50 hidden overflow-y-auto pb-20">
             <div class="sticky top-0 bg-gradient-to-r from-red-600 to-red-500 text-white p-4 shadow-lg z-10">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold">📋 Daftar Laporan</h2>
-                    <button id="btnCloseList" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg transition">
-                        🗺️ Peta
-                    </button>
+                <h2 class="text-xl font-bold mb-3">📋 Daftar Laporan</h2>
+                
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
+                        <div class="text-2xl font-bold" id="totalReports">0</div>
+                        <div class="text-xs">Total</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
+                        <div class="text-2xl font-bold" id="todayReports">0</div>
+                        <div class="text-xs">Hari Ini</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
+                        <div class="text-2xl font-bold" id="activeReports">0</div>
+                        <div class="text-xs">Aktif</div>
+                    </div>
                 </div>
+                
                 <!-- Filter -->
-                <div class="mt-3">
-                    <select id="filterKategori" class="w-full px-4 py-2 rounded-lg text-gray-800 font-semibold">
-                        <option value="">🔍 Semua Kategori</option>
-                        <option value="banjir">🌊 Banjir</option>
-                        <option value="kebakaran">🔥 Kebakaran</option>
-                        <option value="kecelakaan">🚗 Kecelakaan</option>
-                        <option value="kriminal">⚠️ Kriminal</option>
-                        <option value="macet">🚦 Kemacetan</option>
-                        <option value="lainnya">❓ Lainnya</option>
-                    </select>
-                </div>
+                <select id="filterKategori" class="w-full px-4 py-2 rounded-lg text-gray-800 font-semibold">
+                    <option value="">🔍 Semua Kategori</option>
+                    <option value="banjir">🌊 Banjir</option>
+                    <option value="kebakaran">🔥 Kebakaran</option>
+                    <option value="kecelakaan">🚗 Kecelakaan</option>
+                    <option value="kriminal">⚠️ Kriminal</option>
+                    <option value="macet">🚦 Kemacetan</option>
+                    <option value="lainnya">❓ Lainnya</option>
+                </select>
             </div>
             
             <div id="reportsList" class="p-4 space-y-3">
@@ -249,10 +363,199 @@
             </div>
         </div>
 
+        <!-- Emergency Contacts Panel -->
+        <div id="contactsPanel" class="fixed inset-0 bg-gray-50 z-50 hidden overflow-y-auto pb-20">
+            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 shadow-lg z-10">
+                <h2 class="text-xl font-bold">📞 Kontak Darurat</h2>
+                <p class="text-sm text-blue-100 mt-1">Hubungi layanan darurat terdekat</p>
+            </div>
+            
+            <div class="p-4 space-y-3">
+                <!-- Police -->
+                <div class="contact-card bg-white rounded-xl shadow-md p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
+                                👮
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">Polisi</div>
+                                <div class="text-sm text-gray-600">110</div>
+                            </div>
+                        </div>
+                        <a href="tel:110" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            📞 Hubungi
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Fire Department -->
+                <div class="contact-card bg-white rounded-xl shadow-md p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-2xl">
+                                🚒
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">Pemadam Kebakaran</div>
+                                <div class="text-sm text-gray-600">113</div>
+                            </div>
+                        </div>
+                        <a href="tel:113" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            📞 Hubungi
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Ambulance -->
+                <div class="contact-card bg-white rounded-xl shadow-md p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-2xl">
+                                🚑
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">Ambulans</div>
+                                <div class="text-sm text-gray-600">118 / 119</div>
+                            </div>
+                        </div>
+                        <a href="tel:118" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            📞 Hubungi
+                        </a>
+                    </div>
+                </div>
+
+                <!-- SAR -->
+                <div class="contact-card bg-white rounded-xl shadow-md p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-2xl">
+                                🆘
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">SAR (Basarnas)</div>
+                                <div class="text-sm text-gray-600">115</div>
+                            </div>
+                        </div>
+                        <a href="tel:115" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            📞 Hubungi
+                        </a>
+                    </div>
+                </div>
+
+                <!-- BPBD -->
+                <div class="contact-card bg-white rounded-xl shadow-md p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-2xl">
+                                ⚠️
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">BPBD</div>
+                                <div class="text-sm text-gray-600">117</div>
+                            </div>
+                        </div>
+                        <a href="tel:117" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            📞 Hubungi
+                        </a>
+                    </div>
+                </div>
+
+                <!-- PLN -->
+                <div class="contact-card bg-white rounded-xl shadow-md p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-2xl">
+                                ⚡
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800">PLN</div>
+                                <div class="text-sm text-gray-600">123</div>
+                            </div>
+                        </div>
+                        <a href="tel:123" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition">
+                            📞 Hubungi
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hazard Zones Panel -->
+        <div id="zonesPanel" class="fixed inset-0 bg-gray-50 z-50 hidden overflow-y-auto pb-20">
+            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-500 text-white p-4 shadow-lg z-10">
+                <h2 class="text-xl font-bold mb-3">⚠️ Zona Rawan</h2>
+                
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
+                        <div class="text-2xl font-bold" id="totalZones">0</div>
+                        <div class="text-xs">Total Zona</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
+                        <div class="text-2xl font-bold text-red-300" id="highRiskZones">0</div>
+                        <div class="text-xs">Tinggi</div>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
+                        <div class="text-2xl font-bold text-yellow-300" id="mediumRiskZones">0</div>
+                        <div class="text-xs">Sedang</div>
+                    </div>
+                </div>
+                
+                <!-- Filter -->
+                <select id="filterZoneLevel" class="w-full px-4 py-2 rounded-lg text-gray-800 font-semibold">
+                    <option value="">🔍 Semua Tingkat</option>
+                    <option value="tinggi">🔴 Tinggi</option>
+                    <option value="sedang">🟡 Sedang</option>
+                    <option value="rendah">🟢 Rendah</option>
+                </select>
+            </div>
+            
+            <div id="zonesList" class="p-4 space-y-3">
+                <!-- Will be filled by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav fixed bottom-0 left-0 right-0 bg-white flex items-center justify-around">
+            <div class="nav-item active" data-view="map">
+                <span class="text-2xl">🗺️</span>
+                <span class="text-xs font-semibold">Peta</span>
+            </div>
+            <div class="nav-item" data-view="list">
+                <span class="text-2xl">📋</span>
+                <span class="text-xs font-semibold">Laporan</span>
+            </div>
+            <div class="nav-item" data-view="contacts">
+                <span class="text-2xl">📞</span>
+                <span class="text-xs font-semibold">Kontak</span>
+            </div>
+            <div class="nav-item" data-view="zones">
+                <span class="text-2xl">⚠️</span>
+                <span class="text-xs font-semibold">Zona</span>
+            </div>
+        </div>
+
         <!-- Floating Action Button -->
-        <button id="btnLapor" class="fab-button fixed bottom-8 right-8 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl px-6 py-4 transition transform hover:scale-110 font-semibold" title="Buat Laporan Baru">
-            📢 Lapor Darurat
+        <button id="btnLapor" class="fab-button fixed bottom-20 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl w-14 h-14 transition transform hover:scale-110 flex items-center justify-center text-2xl" title="Buat Laporan Baru">
+            📢
         </button>
+
+        <!-- Admin Floating Menu -->
+        <div id="adminMenu" class="admin-menu">
+            <div class="admin-menu-item" id="btnAddZone">
+                <span class="text-xl">➕</span>
+                <span class="font-semibold">Tambah Zona</span>
+            </div>
+            <div class="admin-menu-item" id="btnManageReports">
+                <span class="text-xl">📊</span>
+                <span class="font-semibold">Kelola Laporan</span>
+            </div>
+            <div class="admin-menu-item" id="btnLogoutAdmin">
+                <span class="text-xl">🚪</span>
+                <span class="font-semibold">Logout</span>
+            </div>
+        </div>
 
         <!-- Loading Indicator -->
         <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-red-500 animate-pulse opacity-0" style="transition: opacity 0.3s;"></div>
@@ -334,30 +637,72 @@
                 <button id="btnCloseInfo" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 rounded-lg transition">
                     Tutup
                 </button>
-                <button id="btnDeleteReport" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition">
+                <button id="btnDeleteReport" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition hidden">
                     🗑️ Hapus
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Install PWA Prompt -->
-    <div id="installPrompt" class="fixed bottom-24 left-4 right-4 bg-blue-600 text-white rounded-xl shadow-2xl p-4 hidden z-50">
-        <div class="flex items-start gap-3">
-            <span class="text-3xl">📱</span>
-            <div class="flex-1">
-                <h3 class="font-bold mb-1">Install Info 24 Jam</h3>
-                <p class="text-sm text-blue-100">Akses lebih cepat seperti aplikasi asli!</p>
+    <!-- Modal: Add Zone -->
+    <div id="modalAddZone" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div class="bg-gradient-to-r from-purple-600 to-purple-500 text-white p-6">
+                <h2 class="text-2xl font-bold">Tambah Zona Rawan</h2>
+                <p class="text-sm text-purple-100 mt-1">Tandai area berbahaya</p>
             </div>
-            <button id="btnCloseInstall" class="text-blue-200 hover:text-white text-xl">✕</button>
-        </div>
-        <div class="flex gap-2 mt-3">
-            <button id="btnInstallApp" class="flex-1 bg-white text-blue-600 font-semibold py-2 rounded-lg hover:bg-blue-50 transition">
-                ⬇️ Install
-            </button>
-            <button id="btnInstallLater" class="flex-1 bg-blue-700 text-white font-semibold py-2 rounded-lg hover:bg-blue-800 transition">
-                Nanti Saja
-            </button>
+
+            <form id="formAddZone" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nama Zona *</label>
+                    <input type="text" id="zoneName" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required placeholder="Contoh: Jl. Sudirman KM 5">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tipe Bahaya *</label>
+                    <select id="zoneType" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required>
+                        <option value="">-- Pilih Tipe --</option>
+                        <option value="banjir">🌊 Rawan Banjir</option>
+                        <option value="longsor">🏔️ Rawan Longsor</option>
+                        <option value="kriminal">⚠️ Rawan Kriminal</option>
+                        <option value="kecelakaan">🚗 Rawan Kecelakaan</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tingkat Bahaya *</label>
+                    <select id="zoneLevel" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required>
+                        <option value="">-- Pilih Tingkat --</option>
+                        <option value="tinggi">🔴 Tinggi</option>
+                        <option value="sedang">🟡 Sedang</option>
+                        <option value="rendah">🟢 Rendah</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Radius (meter) *</label>
+                    <input type="number" id="zoneRadius" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required placeholder="500" value="500" min="100" max="5000">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Keterangan</label>
+                    <textarea id="zoneDescription" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 h-20 resize-none" placeholder="Informasi tambahan tentang zona ini..."></textarea>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-xs text-gray-600 font-semibold mb-1">📍 Pusat Zona:</p>
+                    <p id="zoneLocation" class="text-sm text-gray-800 font-mono">Akan menggunakan lokasi Anda saat ini</p>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="button" id="btnCancelZone" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 rounded-lg transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-lg transition">
+                        ➕ Tambah Zona
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -386,6 +731,26 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Install PWA Prompt -->
+    <div id="installPrompt" class="fixed bottom-24 left-4 right-4 bg-blue-600 text-white rounded-xl shadow-2xl p-4 hidden z-50">
+        <div class="flex items-start gap-3">
+            <span class="text-3xl">📱</span>
+            <div class="flex-1">
+                <h3 class="font-bold mb-1">Install Info 24 Jam</h3>
+                <p class="text-sm text-blue-100">Akses lebih cepat seperti aplikasi asli!</p>
+            </div>
+            <button id="btnCloseInstall" class="text-blue-200 hover:text-white text-xl">✕</button>
+        </div>
+        <div class="flex gap-2 mt-3">
+            <button id="btnInstallApp" class="flex-1 bg-white text-blue-600 font-semibold py-2 rounded-lg hover:bg-blue-50 transition">
+                ⬇️ Install
+            </button>
+            <button id="btnInstallLater" class="flex-1 bg-blue-700 text-white font-semibold py-2 rounded-lg hover:bg-blue-800 transition">
+                Nanti Saja
+            </button>
         </div>
     </div>
 
