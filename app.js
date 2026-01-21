@@ -120,7 +120,8 @@ function initSupabase() {
     }
     
     try {
-    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Tambahkan 'window.' di depan supabase.createClient
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         console.log('✅ Supabase initialized');
         
         // Setup real-time subscription
