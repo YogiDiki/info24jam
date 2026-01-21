@@ -1,20 +1,24 @@
 /* ==========================================
-   Info 24 Jam - Main Application JS
-   Fixed Version - Modal Z-Index Issue Resolved
+   Info 24 Jam - Production Version
+   HARDCODED CREDENTIALS - Ready for Production
    ========================================== */
 
-// Configuration & Global Variables
-let SUPABASE_URL = '';
-let SUPABASE_KEY = '';
-let CLOUDINARY_CLOUD = '';
-let CLOUDINARY_PRESET = '';
+// ⚙️ KONFIGURASI - ISI DENGAN KREDENSIAL ANDA
+const CONFIG = {
+    SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',  // Contoh: https://xxxxx.supabase.co
+    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZHl2Z21uaWR6eHJ3aWRwenFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NjI0MjgsImV4cCI6MjA4NDUzODQyOH0.83XgYx8_94fnVbPd0N7q9FAfPFUTjJcliDOzTGNzfRQ',
+    CLOUDINARY_CLOUD: 'dj1f8hjcj',
+    CLOUDINARY_PRESET: 'laporan_warga'
+};
 
+// Global Variables
 let map;
 let userMarker;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let supabaseClient;
 let currentReports = new Map();
 let userCurrentFile = null;
+let currentView = 'map'; // 'map' or 'list'
 
 const categoryIcons = {
     banjir: '🌊',
@@ -34,12 +38,60 @@ const categoryColors = {
     lainnya: '#6B7280'
 };
 
+const categoryNames = {
+    banjir: 'Banjir',
+    kebakaran: 'Kebakaran',
+    kecelakaan: 'Kecelakaan',
+    kriminal: 'Kriminal',
+    macet: 'Kemacetan',
+    lainnya: 'Lainnya'
+};
+
+// ==================== TOAST NOTIFICATIONS ====================
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-yellow-500',
+        info: 'bg-blue-500'
+    };
+    
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    toast.className = `toast ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`;
+    toast.innerHTML = `
+        <span class="text-xl">${icons[type]}</span>
+        <span class="flex-1">${message}</span>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 // ==================== INITIALIZATION ====================
 
 async function initApp() {
     console.log('🚀 Initializing Info 24 Jam App...');
     
-    loadSettings();
+    // Check if credentials are configured
+    if (CONFIG.SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
+        showToast('⚠️ Aplikasi belum dikonfigurasi! Hubungi admin.', 'warning');
+        console.error('❌ Kredensial belum diisi di CONFIG');
+    }
+    
     await waitForSupabase();
     initSupabase();
     initMap();
@@ -76,58 +128,11 @@ function waitForSupabase() {
     });
 }
 
-// ==================== SETTINGS MANAGEMENT ====================
-
-function loadSettings() {
-    SUPABASE_URL = window.localStorage.getItem('supabaseUrl') || '';
-    SUPABASE_KEY = window.localStorage.getItem('supabaseKey') || '';
-    CLOUDINARY_CLOUD = window.localStorage.getItem('cloudinaryCloud') || '';
-    CLOUDINARY_PRESET = window.localStorage.getItem('cloudinaryPreset') || '';
-    
-    const urlInput = document.getElementById('supabaseUrl');
-    const keyInput = document.getElementById('supabaseKey');
-    const cloudInput = document.getElementById('cloudinaryCloud');
-    const presetInput = document.getElementById('cloudinaryPreset');
-    
-    if (urlInput) urlInput.value = SUPABASE_URL;
-    if (keyInput) keyInput.value = SUPABASE_KEY;
-    if (cloudInput) cloudInput.value = CLOUDINARY_CLOUD;
-    if (presetInput) presetInput.value = CLOUDINARY_PRESET;
-}
-
-function saveSettings() {
-    const url = document.getElementById('supabaseUrl').value.trim();
-    const key = document.getElementById('supabaseKey').value.trim();
-    const cloud = document.getElementById('cloudinaryCloud').value.trim();
-    const preset = document.getElementById('cloudinaryPreset').value.trim();
-    
-    if (!url || !key || !cloud || !preset) {
-        alert('⚠️ Semua field harus diisi!');
-        return;
-    }
-    
-    window.localStorage.setItem('supabaseUrl', url);
-    window.localStorage.setItem('supabaseKey', key);
-    window.localStorage.setItem('cloudinaryCloud', cloud);
-    window.localStorage.setItem('cloudinaryPreset', preset);
-    
-    SUPABASE_URL = url;
-    SUPABASE_KEY = key;
-    CLOUDINARY_CLOUD = cloud;
-    CLOUDINARY_PRESET = preset;
-    
-    initSupabase();
-    closeModal('modalSettings');
-    alert('✅ Pengaturan berhasil disimpan!');
-    
-    // Reload reports with new credentials
-    loadReports();
-}
-
 // ==================== SUPABASE ====================
 
 function initSupabase() {
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY || 
+        CONFIG.SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
         console.warn('⚠️ Supabase credentials not configured');
         return;
     }
@@ -138,11 +143,12 @@ function initSupabase() {
             return;
         }
         
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
         console.log('✅ Supabase initialized');
         setupRealtimeListener();
     } catch (error) {
         console.error('❌ Supabase initialization error:', error);
+        showToast('Gagal koneksi ke database', 'error');
     }
 }
 
@@ -160,10 +166,14 @@ function setupRealtimeListener() {
             
             if (payload.eventType === 'INSERT') {
                 addReportToMap(payload.new);
+                updateListView();
+                showToast('Ada laporan baru!', 'info');
             } else if (payload.eventType === 'UPDATE') {
                 updateReportMarker(payload.new);
+                updateListView();
             } else if (payload.eventType === 'DELETE') {
                 removeReportMarker(payload.old.id);
+                updateListView();
             }
         })
         .subscribe();
@@ -195,11 +205,13 @@ async function loadReports() {
         
         if (data) {
             data.forEach(report => addReportToMap(report));
+            updateListView();
             console.log(`✅ Loaded ${data.length} reports`);
+            showToast(`Memuat ${data.length} laporan`, 'success');
         }
     } catch (error) {
         console.error('❌ Error loading reports:', error);
-        alert(`❌ Error loading reports: ${error.message}`);
+        showToast('Gagal memuat laporan', 'error');
     } finally {
         showLoading(false);
     }
@@ -207,7 +219,7 @@ async function loadReports() {
 
 async function submitReport(formData) {
     if (!supabaseClient) {
-        alert('❌ Supabase belum dikonfigurasi! Silakan masuk ke Pengaturan.');
+        showToast('Database belum terhubung!', 'error');
         return;
     }
     
@@ -227,13 +239,13 @@ async function submitReport(formData) {
         if (error) throw error;
         
         console.log('✅ Report submitted:', data);
-        alert('✅ Laporan berhasil dikirim!');
+        showToast('Laporan berhasil dikirim!', 'success');
         
         closeModal('modalLapor');
         resetForm();
     } catch (error) {
         console.error('❌ Error submitting:', error);
-        alert(`❌ Gagal mengirim laporan: ${error.message}`);
+        showToast(`Gagal mengirim: ${error.message}`, 'error');
     } finally {
         showLoading(false);
         const submitBtn = document.querySelector('#formLapor button[type="submit"]');
@@ -245,7 +257,7 @@ async function submitReport(formData) {
 
 async function deleteReport(reportId) {
     if (!supabaseClient) {
-        alert('❌ Supabase belum dikonfigurasi!');
+        showToast('Database belum terhubung!', 'error');
         return;
     }
     
@@ -260,11 +272,11 @@ async function deleteReport(reportId) {
         
         if (error) throw error;
         
-        alert('✅ Laporan berhasil dihapus');
+        showToast('Laporan berhasil dihapus', 'success');
         closeModal('modalInfo');
     } catch (error) {
         console.error('❌ Error deleting:', error);
-        alert(`❌ Gagal menghapus: ${error.message}`);
+        showToast(`Gagal menghapus: ${error.message}`, 'error');
     } finally {
         showLoading(false);
     }
@@ -319,13 +331,13 @@ function addReportToMap(report) {
     const popupContent = `
         <div style="width: 250px; font-family: system-ui;">
             <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: ${color};">
-                ${icon} ${report.kategori.toUpperCase()}
+                ${icon} ${categoryNames[report.kategori].toUpperCase()}
             </div>
             <p style="margin-bottom: 12px; color: #374151; line-height: 1.4;">${report.deskripsi}</p>
             ${report.foto_url ? `<img src="${report.foto_url}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">` : ''}
             <div style="font-size: 12px; color: #6B7280; margin-bottom: 12px; line-height: 1.6;">
                 <div><strong>📍</strong> ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</div>
-                <div><strong>⏰</strong> ${new Date(report.created_at).toLocaleString('id-ID')}</div>
+                <div><strong>⏰</strong> ${formatDate(report.created_at)}</div>
             </div>
             <button class="report-detail-btn" data-id="${report.id}" style="background: #EF4444; color: white; padding: 8px 16px; border-radius: 8px; width: 100%; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s;">
                 Lihat Detail
@@ -352,11 +364,92 @@ function removeReportMarker(reportId) {
     }
 }
 
+// ==================== LIST VIEW ====================
+
+function updateListView() {
+    const reportsList = document.getElementById('reportsList');
+    const filterKategori = document.getElementById('filterKategori').value;
+    
+    if (!reportsList) return;
+    
+    let reports = Array.from(currentReports.values()).map(r => r.data);
+    
+    // Apply filter
+    if (filterKategori) {
+        reports = reports.filter(r => r.kategori === filterKategori);
+    }
+    
+    // Sort by date (newest first)
+    reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    if (reports.length === 0) {
+        reportsList.innerHTML = `
+            <div class="text-center py-12 text-gray-500">
+                <div class="text-6xl mb-4">📭</div>
+                <p class="text-lg font-semibold">Belum ada laporan</p>
+                <p class="text-sm">Jadilah yang pertama melaporkan!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    reportsList.innerHTML = reports.map(report => {
+        const icon = categoryIcons[report.kategori] || '❓';
+        const color = categoryColors[report.kategori] || '#6B7280';
+        
+        return `
+            <div class="report-card bg-white rounded-xl shadow-md overflow-hidden cursor-pointer" onclick="showReportDetail('${report.id}')">
+                <div class="flex">
+                    ${report.foto_url ? `
+                        <img src="${report.foto_url}" class="w-24 h-24 object-cover" alt="Foto">
+                    ` : `
+                        <div class="w-24 h-24 flex items-center justify-center text-4xl" style="background-color: ${color}20;">
+                            ${icon}
+                        </div>
+                    `}
+                    <div class="flex-1 p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">${icon}</span>
+                            <span class="font-bold text-gray-800" style="color: ${color};">
+                                ${categoryNames[report.kategori]}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600 line-clamp-2 mb-2">
+                            ${report.deskripsi}
+                        </p>
+                        <div class="flex items-center gap-3 text-xs text-gray-500">
+                            <span>📍 ${report.latitude.toFixed(3)}, ${report.longitude.toFixed(3)}</span>
+                            <span>⏰ ${formatTimeAgo(report.created_at)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleView() {
+    const listPanel = document.getElementById('listPanel');
+    const btnToggleView = document.getElementById('btnToggleView');
+    
+    if (currentView === 'map') {
+        currentView = 'list';
+        listPanel.classList.remove('hidden');
+        btnToggleView.innerHTML = '🗺️ Peta';
+        updateListView();
+    } else {
+        currentView = 'map';
+        listPanel.classList.add('hidden');
+        btnToggleView.innerHTML = '📋 List';
+    }
+}
+
 // ==================== GEOLOCATION ====================
 
 function getUserLocation() {
     if (!('geolocation' in navigator)) {
         console.warn('⚠️ Geolocation not supported');
+        showToast('GPS tidak didukung di browser ini', 'warning');
         return;
     }
     
@@ -379,6 +472,8 @@ function getUserLocation() {
         },
         (error) => {
             console.warn('⚠️ Geolocation error:', error);
+            showToast('GPS tidak tersedia - menggunakan lokasi default', 'warning');
+            
             const lokasiEl = document.getElementById('lokasi');
             if (lokasiEl) {
                 lokasiEl.innerHTML = '<span style="color: #F59E0B; font-weight: 600;">⚠️ GPS tidak tersedia - menggunakan lokasi default</span>';
@@ -398,6 +493,8 @@ function setupCloudinaryUpload() {
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
     
     if (!uploadArea || !fileInput) return;
     
@@ -412,6 +509,16 @@ function setupCloudinaryUpload() {
                 fileName.style.color = '#10B981';
                 fileName.style.fontWeight = '600';
             }
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (previewImg && imagePreview) {
+                    previewImg.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
         }
     });
     
@@ -437,23 +544,37 @@ function setupCloudinaryUpload() {
                 fileName.style.color = '#10B981';
                 fileName.style.fontWeight = '600';
             }
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (previewImg && imagePreview) {
+                    previewImg.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
         }
     });
 }
 
 async function uploadImageToCloudinary(file) {
-    if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) {
+    if (!CONFIG.CLOUDINARY_CLOUD || !CONFIG.CLOUDINARY_PRESET ||
+        CONFIG.CLOUDINARY_CLOUD === 'YOUR_CLOUDINARY_CLOUD_NAME') {
         console.warn('⚠️ Cloudinary not configured');
+        showToast('Upload foto tidak tersedia', 'warning');
         return null;
     }
     
     try {
+        showToast('Mengupload foto...', 'info');
+        
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_PRESET);
+        formData.append('upload_preset', CONFIG.CLOUDINARY_PRESET);
         
         const response = await fetch(
-            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, 
+            `https://api.cloudinary.com/v1_1/${CONFIG.CLOUDINARY_CLOUD}/image/upload`, 
             {
                 method: 'POST',
                 body: formData
@@ -464,10 +585,11 @@ async function uploadImageToCloudinary(file) {
         
         const data = await response.json();
         console.log('✅ Image uploaded:', data.secure_url);
+        showToast('Foto berhasil diupload!', 'success');
         return data.secure_url;
     } catch (error) {
         console.error('❌ Cloudinary error:', error);
-        alert('❌ Gagal upload foto. Silakan coba lagi.');
+        showToast('Gagal upload foto', 'error');
         return null;
     }
 }
@@ -475,29 +597,27 @@ async function uploadImageToCloudinary(file) {
 // ==================== FORM HANDLING ====================
 
 function setupEventListeners() {
-    const btnLapor = document.getElementById('btnLapor');
-    const btnSettings = document.getElementById('btnSettings');
-    const btnBatal = document.getElementById('btnBatal');
-    const btnCloseSettings = document.getElementById('btnCloseSettings');
-    const btnCloseInfo = document.getElementById('btnCloseInfo');
-    const btnSaveSettings = document.getElementById('btnSaveSettings');
-    const btnDeleteReport = document.getElementById('btnDeleteReport');
-    const formLapor = document.getElementById('formLapor');
+    // Main buttons
+    document.getElementById('btnLapor')?.addEventListener('click', () => openModal('modalLapor'));
+    document.getElementById('btnToggleView')?.addEventListener('click', toggleView);
+    document.getElementById('btnToggleLegend')?.addEventListener('click', toggleLegend);
+    document.getElementById('btnCloseLegend')?.addEventListener('click', () => {
+        document.getElementById('legendBox').classList.add('hidden');
+    });
+    document.getElementById('btnCloseList')?.addEventListener('click', toggleView);
     
-    if (btnLapor) btnLapor.addEventListener('click', () => openModal('modalLapor'));
-    if (btnSettings) btnSettings.addEventListener('click', () => openModal('modalSettings'));
-    if (btnBatal) btnBatal.addEventListener('click', () => closeModal('modalLapor'));
-    if (btnCloseSettings) btnCloseSettings.addEventListener('click', () => closeModal('modalSettings'));
-    if (btnCloseInfo) btnCloseInfo.addEventListener('click', () => closeModal('modalInfo'));
-    if (btnSaveSettings) btnSaveSettings.addEventListener('click', saveSettings);
-    if (formLapor) formLapor.addEventListener('submit', handleFormSubmit);
+    // Modal buttons
+    document.getElementById('btnBatal')?.addEventListener('click', () => closeModal('modalLapor'));
+    document.getElementById('btnCloseInfo')?.addEventListener('click', () => closeModal('modalInfo'));
+    document.getElementById('formLapor')?.addEventListener('submit', handleFormSubmit);
     
-    if (btnDeleteReport) {
-        btnDeleteReport.addEventListener('click', () => {
-            const reportId = btnDeleteReport.dataset.reportId;
-            if (reportId) deleteReport(reportId);
-        });
-    }
+    document.getElementById('btnDeleteReport')?.addEventListener('click', () => {
+        const reportId = document.getElementById('btnDeleteReport').dataset.reportId;
+        if (reportId) deleteReport(reportId);
+    });
+    
+    // Filter
+    document.getElementById('filterKategori')?.addEventListener('change', updateListView);
     
     setupCloudinaryUpload();
     
@@ -509,7 +629,7 @@ function setupEventListeners() {
     });
     
     // Close modal when clicking outside
-    ['modalLapor', 'modalInfo', 'modalSettings'].forEach(modalId => {
+    ['modalLapor', 'modalInfo'].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', (e) => {
@@ -521,6 +641,11 @@ function setupEventListeners() {
     console.log('✅ Event listeners setup');
 }
 
+function toggleLegend() {
+    const legendBox = document.getElementById('legendBox');
+    legendBox.classList.toggle('hidden');
+}
+
 async function handleFormSubmit(e) {
     e.preventDefault();
     
@@ -528,7 +653,7 @@ async function handleFormSubmit(e) {
     const deskripsi = document.getElementById('deskripsi').value;
     
     if (!kategori || !deskripsi) {
-        alert('⚠️ Kategori dan deskripsi harus diisi!');
+        showToast('Kategori dan deskripsi harus diisi!', 'warning');
         return;
     }
     
@@ -537,10 +662,6 @@ async function handleFormSubmit(e) {
     if (userCurrentFile) {
         console.log('📤 Uploading image...');
         fotoUrl = await uploadImageToCloudinary(userCurrentFile);
-        if (!fotoUrl) {
-            // Upload failed, but allow submission without photo
-            console.warn('⚠️ Proceeding without photo');
-        }
     }
     
     const reportData = {
@@ -566,6 +687,9 @@ function resetForm() {
         fileName.style.fontWeight = '';
     }
     
+    const imagePreview = document.getElementById('imagePreview');
+    if (imagePreview) imagePreview.classList.add('hidden');
+    
     userCurrentFile = null;
 }
 
@@ -581,7 +705,7 @@ function showReportDetail(reportId) {
         <div>
             <div style="margin-bottom: 16px;">
                 <h3 style="font-size: 24px; font-weight: bold; color: ${color};">
-                    ${icon} ${report.kategori.toUpperCase()}
+                    ${icon} ${categoryNames[report.kategori].toUpperCase()}
                 </h3>
             </div>
             
@@ -591,10 +715,7 @@ function showReportDetail(reportId) {
                 <p style="margin-bottom: 12px; color: #374151; line-height: 1.6;">${report.deskripsi}</p>
                 <div style="font-size: 12px; color: #6B7280; line-height: 1.8;">
                     <div><strong>📍 Koordinat:</strong> ${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</div>
-                    <div><strong>⏰ Waktu:</strong> ${new Date(report.created_at).toLocaleString('id-ID', { 
-                        dateStyle: 'full', 
-                        timeStyle: 'short' 
-                    })}</div>
+                    <div><strong>⏰ Waktu:</strong> ${formatDate(report.created_at)}</div>
                     <div><strong>🆔 ID:</strong> ${report.id}</div>
                 </div>
             </div>
@@ -616,7 +737,6 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hidden');
-        // Prevent body scroll when modal is open
         document.body.style.overflow = 'hidden';
     }
 }
@@ -625,7 +745,6 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.add('hidden');
-        // Restore body scroll
         document.body.style.overflow = '';
     }
 }
@@ -638,6 +757,30 @@ function showLoading(show) {
         loadingBar.style.opacity = show ? '1' : '0';
     }
 }
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('id-ID', { 
+        dateStyle: 'full', 
+        timeStyle: 'short' 
+    });
+}
+
+function formatTimeAgo(dateString) {
+    const now = new Date();
+    const date = new Date(dateString);
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Baru saja';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} menit lalu`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} jam lalu`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} hari lalu`;
+    
+    return formatDate(dateString);
+}
+
+// Make showReportDetail global for onclick
+window.showReportDetail = showReportDetail;
 
 // ==================== START APP ====================
 
