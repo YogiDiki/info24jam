@@ -1,11 +1,11 @@
 /* ==========================================
-   Info 24 Jam - Production Version
-   HARDCODED CREDENTIALS - Ready for Production
+   Info 24 Jam - Production Version v2.0
+   NEW FEATURES: Emergency Contacts + Hazard Zones
    ========================================== */
 
-// ⚙️ KONFIGURASI - ISI DENGAN KREDENSIAL ANDA
+// ⚙️ KONFIGURASI
 const CONFIG = {
-    SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',  // Contoh: https://xxxxx.supabase.co
+    SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',
     SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZHl2Z21uaWR6eHJ3aWRwenFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NjI0MjgsImV4cCI6MjA4NDUzODQyOH0.83XgYx8_94fnVbPd0N7q9FAfPFUTjJcliDOzTGNzfRQ',
     CLOUDINARY_CLOUD: 'dj1f8hjcj',
     CLOUDINARY_PRESET: 'laporan_warga'
@@ -17,10 +17,12 @@ let userMarker;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let supabaseClient;
 let currentReports = new Map();
+let currentZones = new Map();
+let zoneCircles = new Map();
 let userCurrentFile = null;
-let currentView = 'map'; // 'map' or 'list'
+let currentView = 'map';
 let isAdmin = false;
-let deferredPrompt = null; // For PWA install
+let deferredPrompt = null;
 
 const categoryIcons = {
     banjir: '🌊',
@@ -47,6 +49,19 @@ const categoryNames = {
     kriminal: 'Kriminal',
     macet: 'Kemacetan',
     lainnya: 'Lainnya'
+};
+
+const zoneLevelColors = {
+    tinggi: '#EF4444',
+    sedang: '#FBBF24',
+    rendah: '#10B981'
+};
+
+const zoneTypeIcons = {
+    banjir: '🌊',
+    longsor: '🏔️',
+    kriminal: '⚠️',
+    kecelakaan: '🚗'
 };
 
 // ==================== TOAST NOTIFICATIONS ====================
@@ -86,9 +101,8 @@ function showToast(message, type = 'info') {
 // ==================== INITIALIZATION ====================
 
 async function initApp() {
-    console.log('🚀 Initializing Info 24 Jam App...');
+    console.log('🚀 Initializing Info 24 Jam App v2.0...');
     
-    // Check if credentials are configured
     if (CONFIG.SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE') {
         showToast('⚠️ Aplikasi belum dikonfigurasi! Hubungi admin.', 'warning');
         console.error('❌ Kredensial belum diisi di CONFIG');
@@ -100,6 +114,7 @@ async function initApp() {
     getUserLocation();
     setupEventListeners();
     loadReports();
+    loadZones();
     setupPWA();
     checkAdminStatus();
     
@@ -159,6 +174,7 @@ function initSupabase() {
 function setupRealtimeListener() {
     if (!supabaseClient) return;
     
+    // Listen to reports
     supabaseClient
         .channel('public:reports')
         .on('postgres_changes', { 
@@ -166,11 +182,12 @@ function setupRealtimeListener() {
             schema: 'public', 
             table: 'reports' 
         }, (payload) => {
-            console.log('📡 Real-time update:', payload);
+            console.log('📡 Report update:', payload);
             
             if (payload.eventType === 'INSERT') {
                 addReportToMap(payload.new);
                 updateListView();
+                updateStats();
                 showToast('Ada laporan baru!', 'info');
             } else if (payload.eventType === 'UPDATE') {
                 updateReportMarker(payload.new);
@@ -178,6 +195,30 @@ function setupRealtimeListener() {
             } else if (payload.eventType === 'DELETE') {
                 removeReportMarker(payload.old.id);
                 updateListView();
+                updateStats();
+            }
+        })
+        .subscribe();
+    
+    // Listen to zones
+    supabaseClient
+        .channel('public:hazard_zones')
+        .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'hazard_zones' 
+        }, (payload) => {
+            console.log('📡 Zone update:', payload);
+            
+            if (payload.eventType === 'INSERT') {
+                addZoneToMap(payload.new);
+                updateZonesView();
+                updateZoneStats();
+                showToast('Zona rawan baru ditambahkan!', 'info');
+            } else if (payload.eventType === 'DELETE') {
+                removeZoneFromMap(payload.old.id);
+                updateZonesView();
+                updateZoneStats();
             }
         })
         .subscribe();
@@ -199,7 +240,6 @@ async function loadReports() {
         
         if (error) throw error;
         
-        // Clear existing markers
         currentReports.forEach((report) => {
             if (report.marker) {
                 map.removeLayer(report.marker);
@@ -210,12 +250,75 @@ async function loadReports() {
         if (data) {
             data.forEach(report => addReportToMap(report));
             updateListView();
+            updateStats();
             console.log(`✅ Loaded ${data.length} reports`);
-            showToast(`Memuat ${data.length} laporan`, 'success');
         }
     } catch (error) {
         console.error('❌ Error loading reports:', error);
         showToast('Gagal memuat laporan', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function loadZones() {
+    if (!supabaseClient) {
+        console.warn('⚠️ Supabase not initialized');
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        const { data, error } = await supabaseClient
+            .from('hazard_zones')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            // Table might not exist yet
+            console.warn('⚠️ Hazard zones table not found. Create it in Supabase with:');
+            console.log(`
+CREATE TABLE hazard_zones (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    level TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    radius INTEGER NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE hazard_zones ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for all users" ON hazard_zones
+    FOR SELECT USING (true);
+
+CREATE POLICY "Enable insert for authenticated users only" ON hazard_zones
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Enable delete for authenticated users only" ON hazard_zones
+    FOR DELETE USING (true);
+            `);
+            return;
+        }
+        
+        zoneCircles.forEach((circle) => {
+            map.removeLayer(circle);
+        });
+        currentZones.clear();
+        zoneCircles.clear();
+        
+        if (data) {
+            data.forEach(zone => addZoneToMap(zone));
+            updateZonesView();
+            updateZoneStats();
+            console.log(`✅ Loaded ${data.length} hazard zones`);
+        }
+    } catch (error) {
+        console.error('❌ Error loading zones:', error);
     } finally {
         showLoading(false);
     }
@@ -265,7 +368,6 @@ async function deleteReport(reportId) {
         return;
     }
     
-    // Check if user is admin
     if (!isAdmin) {
         showToast('Hanya admin yang bisa menghapus laporan!', 'error');
         return;
@@ -287,6 +389,40 @@ async function deleteReport(reportId) {
     } catch (error) {
         console.error('❌ Error deleting:', error);
         showToast(`Gagal menghapus: ${error.message}`, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function submitZone(zoneData) {
+    if (!supabaseClient) {
+        showToast('Database belum terhubung!', 'error');
+        return;
+    }
+    
+    if (!isAdmin) {
+        showToast('Hanya admin yang bisa menambah zona!', 'error');
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        const { data, error } = await supabaseClient
+            .from('hazard_zones')
+            .insert([zoneData])
+            .select();
+        
+        if (error) throw error;
+        
+        console.log('✅ Zone submitted:', data);
+        showToast('Zona rawan berhasil ditambahkan!', 'success');
+        
+        closeModal('modalAddZone');
+        document.getElementById('formAddZone').reset();
+    } catch (error) {
+        console.error('❌ Error submitting zone:', error);
+        showToast(`Gagal menambah zona: ${error.message}`, 'error');
     } finally {
         showLoading(false);
     }
@@ -374,6 +510,55 @@ function removeReportMarker(reportId) {
     }
 }
 
+function addZoneToMap(zone) {
+    if (currentZones.has(zone.id)) return;
+    
+    const color = zoneLevelColors[zone.level] || '#6B7280';
+    
+    const circle = L.circle([zone.latitude, zone.longitude], {
+        radius: zone.radius,
+        fillColor: color,
+        color: color,
+        weight: 2,
+        opacity: 0.6,
+        fillOpacity: 0.2
+    }).addTo(map);
+    
+    const icon = zoneTypeIcons[zone.type] || '⚠️';
+    
+    const popupContent = `
+        <div style="width: 250px; font-family: system-ui;">
+            <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: ${color};">
+                ${icon} ${zone.name}
+            </div>
+            <div style="margin-bottom: 8px;">
+                <span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                    ${zone.level.toUpperCase()}
+                </span>
+            </div>
+            ${zone.description ? `<p style="margin-bottom: 8px; color: #374151; font-size: 14px;">${zone.description}</p>` : ''}
+            <div style="font-size: 12px; color: #6B7280;">
+                <div><strong>📍</strong> ${zone.latitude.toFixed(5)}, ${zone.longitude.toFixed(5)}</div>
+                <div><strong>📏</strong> Radius: ${zone.radius}m</div>
+            </div>
+        </div>
+    `;
+    
+    circle.bindPopup(popupContent);
+    
+    currentZones.set(zone.id, zone);
+    zoneCircles.set(zone.id, circle);
+}
+
+function removeZoneFromMap(zoneId) {
+    const circle = zoneCircles.get(zoneId);
+    if (circle) {
+        map.removeLayer(circle);
+        zoneCircles.delete(zoneId);
+        currentZones.delete(zoneId);
+    }
+}
+
 // ==================== LIST VIEW ====================
 
 function updateListView() {
@@ -384,12 +569,10 @@ function updateListView() {
     
     let reports = Array.from(currentReports.values()).map(r => r.data);
     
-    // Apply filter
     if (filterKategori) {
         reports = reports.filter(r => r.kategori === filterKategori);
     }
     
-    // Sort by date (newest first)
     reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     
     if (reports.length === 0) {
@@ -408,7 +591,7 @@ function updateListView() {
         const color = categoryColors[report.kategori] || '#6B7280';
         
         return `
-            <div class="report-card bg-white rounded-xl shadow-md overflow-hidden cursor-pointer" onclick="showReportDetail('${report.id}')">
+            <div class="report-card bg-white rounded-xl shadow-md overflow-hidden" onclick="showReportDetail('${report.id}')">
                 <div class="flex">
                     ${report.foto_url ? `
                         <img src="${report.foto_url}" class="w-24 h-24 object-cover" alt="Foto">
@@ -418,18 +601,19 @@ function updateListView() {
                         </div>
                     `}
                     <div class="flex-1 p-3">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-2xl">${icon}</span>
-                            <span class="font-bold text-gray-800" style="color: ${color};">
-                                ${categoryNames[report.kategori]}
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="category-badge" style="background-color: ${color};">
+                                ${icon} ${categoryNames[report.kategori]}
                             </span>
                         </div>
-                        <p class="text-sm text-gray-600 line-clamp-2 mb-2">
+                        <p class="text-sm text-gray-700 line-clamp-2 mb-2">
                             ${report.deskripsi}
                         </p>
                         <div class="flex items-center gap-3 text-xs text-gray-500">
                             <span>📍 ${report.latitude.toFixed(3)}, ${report.longitude.toFixed(3)}</span>
-                            <span>⏰ ${formatTimeAgo(report.created_at)}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">
+                            ⏰ ${formatTimeAgo(report.created_at)}
                         </div>
                     </div>
                 </div>
@@ -438,20 +622,162 @@ function updateListView() {
     }).join('');
 }
 
-function toggleView() {
-    const listPanel = document.getElementById('listPanel');
-    const btnToggleView = document.getElementById('btnToggleView');
+function updateStats() {
+    const totalReports = currentReports.size;
     
-    if (currentView === 'map') {
-        currentView = 'list';
-        listPanel.classList.remove('hidden');
-        btnToggleView.innerHTML = '🗺️ Peta';
-        updateListView();
-    } else {
-        currentView = 'map';
-        listPanel.classList.add('hidden');
-        btnToggleView.innerHTML = '📋 List';
+    // Count today's reports
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayReports = Array.from(currentReports.values())
+        .filter(r => new Date(r.data.created_at) >= today).length;
+    
+    // Active reports (last 24 hours)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeReports = Array.from(currentReports.values())
+        .filter(r => new Date(r.data.created_at) >= oneDayAgo).length;
+    
+    const totalEl = document.getElementById('totalReports');
+    const todayEl = document.getElementById('todayReports');
+    const activeEl = document.getElementById('activeReports');
+    
+    if (totalEl) totalEl.textContent = totalReports;
+    if (todayEl) todayEl.textContent = todayReports;
+    if (activeEl) activeEl.textContent = activeReports;
+}
+
+// ==================== ZONES VIEW ====================
+
+function updateZonesView() {
+    const zonesList = document.getElementById('zonesList');
+    const filterLevel = document.getElementById('filterZoneLevel').value;
+    
+    if (!zonesList) return;
+    
+    let zones = Array.from(currentZones.values());
+    
+    if (filterLevel) {
+        zones = zones.filter(z => z.level === filterLevel);
     }
+    
+    zones.sort((a, b) => {
+        const levelOrder = { tinggi: 0, sedang: 1, rendah: 2 };
+        return levelOrder[a.level] - levelOrder[b.level];
+    });
+    
+    if (zones.length === 0) {
+        zonesList.innerHTML = `
+            <div class="text-center py-12 text-gray-500">
+                <div class="text-6xl mb-4">📍</div>
+                <p class="text-lg font-semibold">Belum ada zona rawan</p>
+                <p class="text-sm">Admin dapat menambahkan zona</p>
+            </div>
+        `;
+        return;
+    }
+    
+    zonesList.innerHTML = zones.map(zone => {
+        const color = zoneLevelColors[zone.level] || '#6B7280';
+        const icon = zoneTypeIcons[zone.type] || '⚠️';
+        
+        return `
+            <div class="zone-card bg-white rounded-xl shadow-md p-4" style="border-left-color: ${color};">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">${icon}</span>
+                        <div>
+                            <div class="font-bold text-gray-800">${zone.name}</div>
+                            <div class="text-xs text-gray-500">${zone.type}</div>
+                        </div>
+                    </div>
+                    <span class="category-badge" style="background-color: ${color};">
+                        ${zone.level.toUpperCase()}
+                    </span>
+                </div>
+                ${zone.description ? `
+                    <p class="text-sm text-gray-600 mb-2">${zone.description}</p>
+                ` : ''}
+                <div class="text-xs text-gray-500 space-y-1">
+                    <div>📍 ${zone.latitude.toFixed(5)}, ${zone.longitude.toFixed(5)}</div>
+                    <div>📏 Radius: ${zone.radius} meter</div>
+                    <div>⏰ ${formatTimeAgo(zone.created_at)}</div>
+                </div>
+                <button onclick="focusOnZone('${zone.id}')" class="mt-3 w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-semibold transition">
+                    🎯 Lihat di Peta
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateZoneStats() {
+    const totalZones = currentZones.size;
+    
+    const highRiskZones = Array.from(currentZones.values())
+        .filter(z => z.level === 'tinggi').length;
+    
+    const mediumRiskZones = Array.from(currentZones.values())
+        .filter(z => z.level === 'sedang').length;
+    
+    const totalEl = document.getElementById('totalZones');
+    const highEl = document.getElementById('highRiskZones');
+    const mediumEl = document.getElementById('mediumRiskZones');
+    
+    if (totalEl) totalEl.textContent = totalZones;
+    if (highEl) highEl.textContent = highRiskZones;
+    if (mediumEl) mediumEl.textContent = mediumRiskZones;
+}
+
+function focusOnZone(zoneId) {
+    const zone = currentZones.get(zoneId);
+    if (!zone) return;
+    
+    // Switch to map view
+    switchView('map');
+    
+    // Center map on zone
+    map.setView([zone.latitude, zone.longitude], 15);
+    
+    // Open popup
+    const circle = zoneCircles.get(zoneId);
+    if (circle) {
+        circle.openPopup();
+    }
+}
+
+// ==================== VIEW SWITCHING ====================
+
+function switchView(view) {
+    currentView = view;
+    
+    // Hide all panels
+    document.getElementById('map').classList.add('hidden');
+    document.getElementById('listPanel').classList.add('hidden');
+    document.getElementById('contactsPanel').classList.add('hidden');
+    document.getElementById('zonesPanel').classList.add('hidden');
+    
+    // Show selected panel
+    if (view === 'map') {
+        document.getElementById('map').classList.remove('hidden');
+        setTimeout(() => map.invalidateSize(), 100);
+    } else if (view === 'list') {
+        document.getElementById('listPanel').classList.remove('hidden');
+        updateListView();
+        updateStats();
+    } else if (view === 'contacts') {
+        document.getElementById('contactsPanel').classList.remove('hidden');
+    } else if (view === 'zones') {
+        document.getElementById('zonesPanel').classList.remove('hidden');
+        updateZonesView();
+        updateZoneStats();
+    }
+    
+    // Update active nav item
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.view === view) {
+            item.classList.add('active');
+        }
+    });
 }
 
 // ==================== GEOLOCATION ====================
@@ -476,6 +802,11 @@ function getUserLocation() {
             const lokasiEl = document.getElementById('lokasi');
             if (lokasiEl) {
                 lokasiEl.innerHTML = `<span style="color: #10B981; font-weight: 600;">✅ ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}</span>`;
+            }
+            
+            const zoneLocationEl = document.getElementById('zoneLocation');
+            if (zoneLocationEl) {
+                zoneLocationEl.textContent = `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`;
             }
             
             console.log('📍 Location updated:', userLocation);
@@ -520,7 +851,6 @@ function setupCloudinaryUpload() {
                 fileName.style.fontWeight = '600';
             }
             
-            // Show preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 if (previewImg && imagePreview) {
@@ -555,7 +885,6 @@ function setupCloudinaryUpload() {
                 fileName.style.fontWeight = '600';
             }
             
-            // Show preview
             const reader = new FileReader();
             reader.onload = (e) => {
                 if (previewImg && imagePreview) {
@@ -607,14 +936,28 @@ async function uploadImageToCloudinary(file) {
 // ==================== FORM HANDLING ====================
 
 function setupEventListeners() {
+    // Bottom navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            switchView(item.dataset.view);
+        });
+    });
+    
     // Main buttons
-    document.getElementById('btnLapor')?.addEventListener('click', () => openModal('modalLapor'));
-    document.getElementById('btnToggleView')?.addEventListener('click', toggleView);
+    document.getElementById('btnLapor')?.addEventListener('click', () => {
+        if (isAdmin) {
+            const adminMenu = document.getElementById('adminMenu');
+            adminMenu.classList.toggle('show');
+        } else {
+            openModal('modalLapor');
+        }
+    });
+    
     document.getElementById('btnToggleLegend')?.addEventListener('click', toggleLegend);
     document.getElementById('btnCloseLegend')?.addEventListener('click', () => {
         document.getElementById('legendBox').classList.add('hidden');
     });
-    document.getElementById('btnCloseList')?.addEventListener('click', toggleView);
+    
     document.getElementById('btnAdmin')?.addEventListener('click', () => {
         if (isAdmin) {
             if (confirm('Logout sebagai admin?')) {
@@ -625,32 +968,59 @@ function setupEventListeners() {
         }
     });
     
+    // Admin menu
+    document.getElementById('btnAddZone')?.addEventListener('click', () => {
+        document.getElementById('adminMenu').classList.remove('show');
+        openModal('modalAddZone');
+    });
+    
+    document.getElementById('btnManageReports')?.addEventListener('click', () => {
+        document.getElementById('adminMenu').classList.remove('show');
+        switchView('list');
+    });
+    
+    document.getElementById('btnLogoutAdmin')?.addEventListener('click', () => {
+        document.getElementById('adminMenu').classList.remove('show');
+        adminLogout();
+    });
+    
     // Modal buttons
     document.getElementById('btnBatal')?.addEventListener('click', () => closeModal('modalLapor'));
     document.getElementById('btnCloseInfo')?.addEventListener('click', () => closeModal('modalInfo'));
     document.getElementById('btnCancelAdmin')?.addEventListener('click', () => closeModal('modalAdmin'));
+    document.getElementById('btnCancelZone')?.addEventListener('click', () => closeModal('modalAddZone'));
+    
     document.getElementById('formLapor')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('formAdminLogin')?.addEventListener('submit', handleAdminLogin);
+    document.getElementById('formAddZone')?.addEventListener('submit', handleZoneSubmit);
     
     document.getElementById('btnDeleteReport')?.addEventListener('click', () => {
         const reportId = document.getElementById('btnDeleteReport').dataset.reportId;
         if (reportId) deleteReport(reportId);
     });
     
-    // Filter
+    // Filters
     document.getElementById('filterKategori')?.addEventListener('change', updateListView);
+    document.getElementById('filterZoneLevel')?.addEventListener('change', updateZonesView);
     
     setupCloudinaryUpload();
     
-    // Event delegation for dynamically created buttons
+    // Event delegation
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('report-detail-btn')) {
             showReportDetail(e.target.dataset.id);
         }
+        
+        // Close admin menu when clicking outside
+        const adminMenu = document.getElementById('adminMenu');
+        const btnLapor = document.getElementById('btnLapor');
+        if (adminMenu && !adminMenu.contains(e.target) && e.target !== btnLapor) {
+            adminMenu.classList.remove('show');
+        }
     });
     
-    // Close modal when clicking outside
-    ['modalLapor', 'modalInfo', 'modalAdmin'].forEach(modalId => {
+    // Close modals when clicking outside
+    ['modalLapor', 'modalInfo', 'modalAdmin', 'modalAddZone'].forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.addEventListener('click', (e) => {
@@ -695,6 +1065,34 @@ async function handleFormSubmit(e) {
     };
     
     await submitReport(reportData);
+}
+
+async function handleZoneSubmit(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('zoneName').value;
+    const type = document.getElementById('zoneType').value;
+    const level = document.getElementById('zoneLevel').value;
+    const radius = parseInt(document.getElementById('zoneRadius').value);
+    const description = document.getElementById('zoneDescription').value;
+    
+    if (!name || !type || !level || !radius) {
+        showToast('Semua field wajib diisi!', 'warning');
+        return;
+    }
+    
+    const zoneData = {
+        name,
+        type,
+        level,
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+        radius,
+        description,
+        created_at: new Date().toISOString()
+    };
+    
+    await submitZone(zoneData);
 }
 
 function resetForm() {
@@ -749,7 +1147,6 @@ function showReportDetail(reportId) {
     const deleteBtn = document.getElementById('btnDeleteReport');
     if (deleteBtn) {
         deleteBtn.dataset.reportId = reportId;
-        // Show/hide delete button based on admin status
         if (isAdmin) {
             deleteBtn.classList.remove('hidden');
         } else {
@@ -808,24 +1205,21 @@ function formatTimeAgo(dateString) {
     return formatDate(dateString);
 }
 
-// Make showReportDetail global for onclick
 window.showReportDetail = showReportDetail;
+window.focusOnZone = focusOnZone;
 
 // ==================== PWA INSTALLATION ====================
 
 function setupPWA() {
-    // Listen for beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
         
-        // Show install prompt after 10 seconds
         setTimeout(() => {
             showInstallPrompt();
         }, 10000);
     });
     
-    // Check if already installed
     window.addEventListener('appinstalled', () => {
         console.log('✅ PWA installed successfully');
         showToast('Aplikasi berhasil diinstall!', 'success');
@@ -833,7 +1227,6 @@ function setupPWA() {
         deferredPrompt = null;
     });
     
-    // Setup install buttons
     const btnInstall = document.getElementById('btnInstallApp');
     const btnInstallLater = document.getElementById('btnInstallLater');
     const btnCloseInstall = document.getElementById('btnCloseInstall');
@@ -860,7 +1253,6 @@ function setupPWA() {
     if (btnInstallLater) {
         btnInstallLater.addEventListener('click', () => {
             hideInstallPrompt();
-            // Show again after 1 day
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             localStorage.setItem('installPromptDismissed', tomorrow.toISOString());
@@ -873,13 +1265,11 @@ function setupPWA() {
 }
 
 function showInstallPrompt() {
-    // Check if dismissed recently
     const dismissed = localStorage.getItem('installPromptDismissed');
     if (dismissed && new Date(dismissed) > new Date()) {
         return;
     }
     
-    // Check if standalone (already installed)
     if (window.matchMedia('(display-mode: standalone)').matches) {
         return;
     }
@@ -921,8 +1311,7 @@ async function handleAdminLogin(e) {
     try {
         showLoading(true);
         
-        // Simple auth check (dalam production, gunakan proper auth)
-        // Untuk sekarang, hardcode admin credentials
+        // Simple auth check
         if (email === 'admin@info24jam.com' && password === 'admin123') {
             isAdmin = true;
             localStorage.setItem('adminToken', 'admin_session_' + Date.now());
@@ -930,7 +1319,7 @@ async function handleAdminLogin(e) {
             showToast('Login berhasil! Anda sekarang Admin', 'success');
             closeModal('modalAdmin');
             updateAdminUI();
-            loadReports(); // Reload untuk show delete buttons
+            loadReports();
         } else {
             showToast('Email atau password salah!', 'error');
         }
@@ -949,6 +1338,12 @@ function updateAdminUI() {
         btnAdmin.classList.add('bg-yellow-600', 'hover:bg-yellow-700');
         btnAdmin.classList.remove('bg-red-700', 'hover:bg-red-800');
     }
+    
+    const btnLapor = document.getElementById('btnLapor');
+    if (btnLapor && isAdmin) {
+        btnLapor.innerHTML = '⚙️';
+        btnLapor.title = 'Menu Admin';
+    }
 }
 
 function adminLogout() {
@@ -962,8 +1357,14 @@ function adminLogout() {
         btnAdmin.classList.add('bg-red-700', 'hover:bg-red-800');
     }
     
+    const btnLapor = document.getElementById('btnLapor');
+    if (btnLapor) {
+        btnLapor.innerHTML = '📢';
+        btnLapor.title = 'Buat Laporan Baru';
+    }
+    
     showToast('Logout berhasil', 'info');
-    loadReports(); // Reload untuk hide delete buttons
+    loadReports();
 }
 
 // ==================== START APP ====================
