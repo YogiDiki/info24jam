@@ -1,30 +1,50 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Info 24 Jam - Platform crowdsourcing darurat real-time">
-    <meta name="theme-color" content="#EF4444">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Info 24 Jam - Platform pelaporan darurat real-time">
+    <meta name="theme-color" content="#d41111">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Info 24 Jam">
     
-    <title>Info 24 Jam - Lapor Darurat Real-Time</title>
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>Info 24 Jam - Lapor Darurat</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     
-    <!-- Tailwind CSS CDN -->
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Custom Styles -->
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#d41111",
+                        "primary-dark": "#a00e0e",
+                        "background-dark": "#0a0a0c",
+                        "card-dark": "#181111",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
         * {
+            -webkit-tap-highlight-color: transparent;
             box-sizing: border-box;
         }
         
@@ -33,67 +53,44 @@
             padding: 0;
             height: 100%;
             width: 100%;
-            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-family: 'Public Sans', sans-serif;
+            overflow: hidden;
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
         
         #app {
             height: 100vh;
             display: flex;
             flex-direction: column;
-            position: relative;
         }
         
-        /* Z-index Hierarchy */
         #map {
+            flex: 1;
             position: relative;
             z-index: 1;
         }
         
-        header {
-            position: relative;
-            z-index: 10;
-        }
-        
-        .fab-button {
-            z-index: 20;
-        }
-        
-        .bottom-nav {
-            z-index: 25;
-        }
-        
-        .legend-box {
-            z-index: 15;
-        }
-        
-        #loadingBar {
-            z-index: 30;
-        }
-        
         .modal-overlay {
-            z-index: 1000 !important;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
         }
         
-        .toast {
-            z-index: 2000 !important;
+        .toast-container {
+            z-index: 2000;
         }
         
-        #uploadArea.dragover {
-            border-color: #EF4444;
-            background-color: #FEE2E2;
+        .animate-slideup {
+            animation: slideup 0.3s ease-out;
         }
         
-        .leaflet-popup-content-wrapper {
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        /* Animations */
-        .modal-content {
-            animation: slideUp 0.3s ease-out;
-        }
-        
-        @keyframes slideUp {
+        @keyframes slideup {
             from {
                 opacity: 0;
                 transform: translateY(20px);
@@ -104,250 +101,163 @@
             }
         }
         
-        @keyframes slideInRight {
+        .animate-slidein {
+            animation: slidein 0.3s ease-out;
+        }
+        
+        @keyframes slidein {
             from {
+                opacity: 0;
                 transform: translateX(100%);
-                opacity: 0;
             }
             to {
+                opacity: 1;
                 transform: translateX(0);
-                opacity: 1;
             }
         }
         
-        @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
         }
         
-        .toast {
-            animation: slideInRight 0.3s ease-out;
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         
-        .toast.hiding {
-            animation: fadeOut 0.3s ease-out;
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
         
-        /* Legend styles */
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
-        }
-        
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 2px solid rgba(0,0,0,0.2);
-        }
-        
-        /* List view styles - IMPROVED */
-        .report-card {
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        
-        .report-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-        }
-        
-        .report-card:active {
-            transform: translateY(0);
-        }
-        
-        .category-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            color: white;
-        }
-        
-        /* Bottom Navigation */
-        .bottom-nav {
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .nav-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 8px;
-            transition: all 0.2s;
-            cursor: pointer;
-            color: #6B7280;
-        }
-        
-        .nav-item.active {
-            color: #EF4444;
-        }
-        
-        .nav-item:hover {
-            background-color: #FEE2E2;
-        }
-        
-        /* Stats Card */
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 16px;
-            color: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        /* Contact Card */
-        .contact-card {
-            transition: all 0.2s;
-        }
-        
-        .contact-card:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        /* Zone Card */
-        .zone-card {
-            transition: all 0.2s;
-            border-left: 4px solid;
-        }
-        
-        .zone-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-        }
-        
-        /* Admin Floating Menu */
-        .admin-menu {
-            position: fixed;
-            bottom: 80px;
-            right: 8px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
-            transform: scale(0);
-            transform-origin: bottom right;
-            transition: transform 0.2s;
-        }
-        
-        .admin-menu.show {
-            transform: scale(1);
-        }
-        
-        .admin-menu-item {
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: background 0.2s;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        
-        .admin-menu-item:hover {
-            background: #F3F4F6;
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="dark:bg-background-dark">
     <!-- Main Container -->
     <div id="app">
         <!-- Header -->
-        <header class="bg-gradient-to-r from-red-600 to-red-500 text-white p-4 shadow-lg">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold">📍 Info 24 Jam</h1>
-                    <p class="text-sm text-red-100">by Emydn Group</p>
+        <header class="bg-gradient-to-r from-primary to-red-600 text-white shadow-lg relative z-50">
+            <div class="flex items-center justify-between p-4">
+                <button id="btnMenu" class="flex items-center justify-center w-10 h-10">
+                    <span class="material-symbols-outlined text-2xl">menu</span>
+                </button>
+                
+                <div class="flex flex-col items-center flex-1">
+                    <h1 class="text-lg font-bold tracking-tight">Info 24 Jam</h1>
+                    <p class="text-[10px] uppercase tracking-widest font-bold opacity-90">Emydn Group</p>
                 </div>
-                <div class="flex gap-2">
-                    <button id="btnToggleLegend" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg transition duration-200 font-semibold">
-                        🎨 Legend
-                    </button>
-                    <button id="btnAdmin" class="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg transition duration-200 font-semibold" title="Admin Login">
-                        🔐
-                    </button>
+                
+                <button id="btnProfile" class="flex items-center justify-center w-10 h-10">
+                    <span class="material-symbols-outlined text-2xl">account_circle</span>
+                </button>
+            </div>
+            
+            <!-- Search Bar -->
+            <div class="px-4 pb-3">
+                <div class="flex items-center bg-black/20 rounded-lg overflow-hidden">
+                    <span class="material-symbols-outlined text-white/70 pl-3">search</span>
+                    <input type="text" placeholder="Cari area atau kejadian..." 
+                           class="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm focus:outline-none">
                 </div>
+            </div>
+            
+            <!-- Category Filters -->
+            <div class="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
+                <button class="filter-chip active flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 border border-white/30 whitespace-nowrap text-xs font-semibold" data-category="">
+                    <span class="material-symbols-outlined text-sm">grid_view</span>
+                    Semua
+                </button>
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="banjir">
+                    <span class="material-symbols-outlined text-sm">waves</span>
+                    Banjir
+                </button>
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="kebakaran">
+                    <span class="material-symbols-outlined text-sm">local_fire_department</span>
+                    Kebakaran
+                </button>
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="kecelakaan">
+                    <span class="material-symbols-outlined text-sm">directions_car</span>
+                    Kecelakaan
+                </button>
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="kriminal">
+                    <span class="material-symbols-outlined text-sm">gavel</span>
+                    Kriminal
+                </button>
             </div>
         </header>
 
         <!-- Map Container -->
-        <div id="map" class="flex-1"></div>
-
-        <!-- Legend Box -->
-        <div id="legendBox" class="legend-box hidden fixed top-24 right-4 bg-white rounded-xl shadow-2xl p-4 max-w-xs">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold text-gray-800">📌 Keterangan Warna</h3>
-                <button id="btnCloseLegend" class="text-gray-500 hover:text-gray-700">✕</button>
+        <div id="map" class="relative"></div>
+        
+        <!-- Map Controls Overlay -->
+        <div class="absolute right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-3 pointer-events-none">
+            <div class="pointer-events-auto flex flex-col bg-card-dark/90 rounded-lg overflow-hidden shadow-xl border border-white/5">
+                <button id="btnZoomIn" class="flex items-center justify-center w-10 h-10 hover:bg-white/10 active:bg-primary/20 transition">
+                    <span class="material-symbols-outlined text-white">add</span>
+                </button>
+                <div class="h-px bg-white/10"></div>
+                <button id="btnZoomOut" class="flex items-center justify-center w-10 h-10 hover:bg-white/10 active:bg-primary/20 transition">
+                    <span class="material-symbols-outlined text-white">remove</span>
+                </button>
             </div>
-            <div class="space-y-2 text-sm">
-                <div class="legend-item">
-                    <div class="legend-color" style="background-color: #3B82F6;"></div>
-                    <span>🌊 Banjir</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background-color: #EF4444;"></div>
-                    <span>🔥 Kebakaran</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background-color: #FBBF24;"></div>
-                    <span>🚗 Kecelakaan</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background-color: #8B5CF6;"></div>
-                    <span>⚠️ Kriminal</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background-color: #F59E0B;"></div>
-                    <span>🚦 Kemacetan</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background-color: #6B7280;"></div>
-                    <span>❓ Lainnya</span>
-                </div>
-            </div>
-            <div class="mt-3 pt-3 border-t border-gray-200">
-                <div class="flex items-center gap-2 text-xs text-gray-600">
-                    <div class="w-3 h-3 rounded-full bg-blue-500 border-2 border-blue-900"></div>
-                    <span>= Lokasi Anda</span>
-                </div>
-            </div>
+            
+            <button id="btnMyLocation" class="pointer-events-auto flex items-center justify-center w-12 h-12 bg-card-dark/90 rounded-lg shadow-xl border border-white/5 hover:bg-white/10 active:bg-primary/20 transition">
+                <span class="material-symbols-outlined filled text-primary text-xl">near_me</span>
+            </button>
         </div>
 
-        <!-- List View Panel -->
-        <div id="listPanel" class="fixed inset-0 bg-gray-50 z-50 hidden overflow-y-auto pb-20">
-            <div class="sticky top-0 bg-gradient-to-r from-red-600 to-red-500 text-white p-4 shadow-lg z-10">
-                <h2 class="text-xl font-bold mb-3">📋 Daftar Laporan</h2>
-                
-                <!-- Stats -->
-                <div class="grid grid-cols-3 gap-2 mb-3">
-                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                        <div class="text-2xl font-bold" id="totalReports">0</div>
-                        <div class="text-xs">Total</div>
-                    </div>
-                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                        <div class="text-2xl font-bold" id="todayReports">0</div>
-                        <div class="text-xs">Hari Ini</div>
-                    </div>
-                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                        <div class="text-2xl font-bold" id="activeReports">0</div>
-                        <div class="text-xs">Aktif</div>
-                    </div>
-                </div>
-                
-                <!-- Filter -->
-                <select id="filterKategori" class="w-full px-4 py-2 rounded-lg text-gray-800 font-semibold">
+        <!-- Bottom Sheet Toggle -->
+        <div class="absolute bottom-24 left-4 right-4 z-10 flex gap-2">
+            <button id="btnToggleList" class="flex-1 bg-card-dark/90 ios-blur text-white rounded-lg px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-lg">list</span>
+                Lihat Daftar Laporan
+            </button>
+        </div>
+
+        <!-- Floating Action Button -->
+        <button id="btnLapor" class="fixed bottom-6 right-6 w-16 h-16 bg-primary hover:bg-primary-dark rounded-full shadow-2xl flex items-center justify-center z-20 transition transform active:scale-95 ring-4 ring-primary/20">
+            <span class="material-symbols-outlined filled text-white text-3xl">campaign</span>
+        </button>
+
+        <!-- Emergency Call Button -->
+        <div class="fixed bottom-6 left-6 z-20 flex flex-col gap-2" id="emergencyButtons">
+            <button class="hidden emergency-extended bg-red-800/90 text-white rounded-full px-4 py-2 text-xs font-bold shadow-lg flex items-center gap-2 border border-white/20">
+                <span>POLISI 110</span>
+                <span class="material-symbols-outlined text-sm">local_police</span>
+            </button>
+            <button class="hidden emergency-extended bg-red-700/90 text-white rounded-full px-4 py-2 text-xs font-bold shadow-lg flex items-center gap-2 border border-white/20">
+                <span>AMBULANS 119</span>
+                <span class="material-symbols-outlined text-sm">medical_services</span>
+            </button>
+            <button id="btnEmergency" class="w-12 h-12 bg-red-700 rounded-full shadow-xl flex items-center justify-center ring-4 ring-red-700/20">
+                <span class="material-symbols-outlined filled text-white text-xl">call</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container fixed top-20 right-4 space-y-2 z-50"></div>
+
+    <!-- Modal: List View -->
+    <div id="modalList" class="modal-overlay fixed inset-0 bg-black/60 hidden">
+        <div class="h-full flex flex-col bg-background-dark animate-slideup">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-primary to-red-600 text-white p-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold">Daftar Laporan</h2>
+                <button id="btnCloseList" class="flex items-center justify-center w-10 h-10">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <!-- Filter -->
+            <div class="p-4 bg-card-dark border-b border-white/5">
+                <select id="filterKategori" class="w-full px-4 py-2.5 bg-background-dark text-white rounded-lg border border-white/10 focus:border-primary focus:outline-none">
                     <option value="">🔍 Semua Kategori</option>
                     <option value="banjir">🌊 Banjir</option>
                     <option value="kebakaran">🔥 Kebakaran</option>
@@ -358,225 +268,33 @@
                 </select>
             </div>
             
-            <div id="reportsList" class="p-4 space-y-3">
+            <!-- Reports List -->
+            <div id="reportsList" class="flex-1 overflow-y-auto p-4 space-y-3">
                 <!-- Will be filled by JavaScript -->
             </div>
         </div>
-
-        <!-- Emergency Contacts Panel -->
-        <div id="contactsPanel" class="fixed inset-0 bg-gray-50 z-50 hidden overflow-y-auto pb-20">
-            <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 shadow-lg z-10">
-                <h2 class="text-xl font-bold">📞 Kontak Darurat</h2>
-                <p class="text-sm text-blue-100 mt-1">Hubungi layanan darurat terdekat</p>
-            </div>
-            
-            <div class="p-4 space-y-3">
-                <!-- Police -->
-                <div class="contact-card bg-white rounded-xl shadow-md p-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-                                👮
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">Polisi</div>
-                                <div class="text-sm text-gray-600">110</div>
-                            </div>
-                        </div>
-                        <a href="tel:110" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                            📞 Hubungi
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Fire Department -->
-                <div class="contact-card bg-white rounded-xl shadow-md p-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-2xl">
-                                🚒
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">Pemadam Kebakaran</div>
-                                <div class="text-sm text-gray-600">113</div>
-                            </div>
-                        </div>
-                        <a href="tel:113" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                            📞 Hubungi
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Ambulance -->
-                <div class="contact-card bg-white rounded-xl shadow-md p-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-2xl">
-                                🚑
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">Ambulans</div>
-                                <div class="text-sm text-gray-600">118 / 119</div>
-                            </div>
-                        </div>
-                        <a href="tel:118" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                            📞 Hubungi
-                        </a>
-                    </div>
-                </div>
-
-                <!-- SAR -->
-                <div class="contact-card bg-white rounded-xl shadow-md p-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center text-2xl">
-                                🆘
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">SAR (Basarnas)</div>
-                                <div class="text-sm text-gray-600">115</div>
-                            </div>
-                        </div>
-                        <a href="tel:115" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                            📞 Hubungi
-                        </a>
-                    </div>
-                </div>
-
-                <!-- BPBD -->
-                <div class="contact-card bg-white rounded-xl shadow-md p-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-2xl">
-                                ⚠️
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">BPBD</div>
-                                <div class="text-sm text-gray-600">117</div>
-                            </div>
-                        </div>
-                        <a href="tel:117" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                            📞 Hubungi
-                        </a>
-                    </div>
-                </div>
-
-                <!-- PLN -->
-                <div class="contact-card bg-white rounded-xl shadow-md p-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-2xl">
-                                ⚡
-                            </div>
-                            <div>
-                                <div class="font-bold text-gray-800">PLN</div>
-                                <div class="text-sm text-gray-600">123</div>
-                            </div>
-                        </div>
-                        <a href="tel:123" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition">
-                            📞 Hubungi
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Hazard Zones Panel -->
-        <div id="zonesPanel" class="fixed inset-0 bg-gray-50 z-50 hidden overflow-y-auto pb-20">
-            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-500 text-white p-4 shadow-lg z-10">
-                <h2 class="text-xl font-bold mb-3">⚠️ Zona Rawan</h2>
-                
-                <!-- Stats -->
-                <div class="grid grid-cols-3 gap-2 mb-3">
-                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                        <div class="text-2xl font-bold" id="totalZones">0</div>
-                        <div class="text-xs">Total Zona</div>
-                    </div>
-                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                        <div class="text-2xl font-bold text-red-300" id="highRiskZones">0</div>
-                        <div class="text-xs">Tinggi</div>
-                    </div>
-                    <div class="bg-white/20 backdrop-blur-sm rounded-lg p-2 text-center">
-                        <div class="text-2xl font-bold text-yellow-300" id="mediumRiskZones">0</div>
-                        <div class="text-xs">Sedang</div>
-                    </div>
-                </div>
-                
-                <!-- Filter -->
-                <select id="filterZoneLevel" class="w-full px-4 py-2 rounded-lg text-gray-800 font-semibold">
-                    <option value="">🔍 Semua Tingkat</option>
-                    <option value="tinggi">🔴 Tinggi</option>
-                    <option value="sedang">🟡 Sedang</option>
-                    <option value="rendah">🟢 Rendah</option>
-                </select>
-            </div>
-            
-            <div id="zonesList" class="p-4 space-y-3">
-                <!-- Will be filled by JavaScript -->
-            </div>
-        </div>
-
-        <!-- Bottom Navigation -->
-        <div class="bottom-nav fixed bottom-0 left-0 right-0 bg-white flex items-center justify-around">
-            <div class="nav-item active" data-view="map">
-                <span class="text-2xl">🗺️</span>
-                <span class="text-xs font-semibold">Peta</span>
-            </div>
-            <div class="nav-item" data-view="list">
-                <span class="text-2xl">📋</span>
-                <span class="text-xs font-semibold">Laporan</span>
-            </div>
-            <div class="nav-item" data-view="contacts">
-                <span class="text-2xl">📞</span>
-                <span class="text-xs font-semibold">Kontak</span>
-            </div>
-            <div class="nav-item" data-view="zones">
-                <span class="text-2xl">⚠️</span>
-                <span class="text-xs font-semibold">Zona</span>
-            </div>
-        </div>
-
-        <!-- Floating Action Button -->
-        <button id="btnLapor" class="fab-button fixed bottom-20 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl w-14 h-14 transition transform hover:scale-110 flex items-center justify-center text-2xl" title="Buat Laporan Baru">
-            📢
-        </button>
-
-        <!-- Admin Floating Menu -->
-        <div id="adminMenu" class="admin-menu">
-            <div class="admin-menu-item" id="btnAddZone">
-                <span class="text-xl">➕</span>
-                <span class="font-semibold">Tambah Zona</span>
-            </div>
-            <div class="admin-menu-item" id="btnManageReports">
-                <span class="text-xl">📊</span>
-                <span class="font-semibold">Kelola Laporan</span>
-            </div>
-            <div class="admin-menu-item" id="btnLogoutAdmin">
-                <span class="text-xl">🚪</span>
-                <span class="font-semibold">Logout</span>
-            </div>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-red-500 animate-pulse opacity-0" style="transition: opacity 0.3s;"></div>
     </div>
 
-    <!-- Toast Container -->
-    <div id="toastContainer" class="fixed top-20 right-4 space-y-2 z-50"></div>
-
     <!-- Modal: Form Lapor -->
-    <div id="modalLapor" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div class="bg-gradient-to-r from-red-600 to-red-500 text-white p-6 sticky top-0 z-10">
-                <h2 class="text-2xl font-bold">Buat Laporan Darurat</h2>
-                <p class="text-sm text-red-100 mt-1">Lokasi akan diambil otomatis dari GPS Anda</p>
+    <div id="modalLapor" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0">
+        <div class="w-full max-h-[90vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-primary to-red-600 text-white p-6 flex items-center justify-between sticky top-0 z-10">
+                <div class="flex-1">
+                    <h2 class="text-xl font-bold">Lapor Darurat</h2>
+                    <p class="text-sm opacity-90 mt-1">Lokasi otomatis dari GPS Anda</p>
+                </div>
+                <button id="btnCloseLapor" class="flex items-center justify-center w-10 h-10">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
             </div>
 
-            <form id="formLapor" class="p-6 space-y-5">
+            <!-- Form -->
+            <form id="formLapor" class="p-6 space-y-5 overflow-y-auto" style="max-height: calc(90vh - 100px);">
                 <!-- Kategori -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Kategori Darurat *</label>
-                    <select id="kategori" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition" required>
+                    <label class="block text-sm font-semibold text-white mb-2">Kategori Darurat *</label>
+                    <select id="kategori" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-primary focus:outline-none" required>
                         <option value="">-- Pilih Kategori --</option>
                         <option value="banjir">🌊 Banjir</option>
                         <option value="kebakaran">🔥 Kebakaran</option>
@@ -589,191 +307,167 @@
 
                 <!-- Deskripsi -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi Detail *</label>
-                    <textarea id="deskripsi" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent h-28 resize-none transition" placeholder="Jelaskan situasi darurat dengan detail..." required></textarea>
+                    <label class="block text-sm font-semibold text-white mb-2">Deskripsi Detail *</label>
+                    <textarea id="deskripsi" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-primary focus:outline-none h-28 resize-none" placeholder="Jelaskan situasi darurat dengan detail..." required></textarea>
                 </div>
 
                 <!-- Lokasi Display -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p class="text-xs text-gray-600 font-semibold mb-1">📍 Lokasi Anda:</p>
-                    <p id="lokasi" class="text-sm text-gray-800 font-mono">Mengambil koordinat...</p>
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-emerald-500 text-sm">location_on</span>
+                        <p class="text-xs font-semibold text-emerald-500 uppercase tracking-wide">Lokasi Anda</p>
+                    </div>
+                    <p id="lokasi" class="text-sm text-white font-mono">Mengambil koordinat...</p>
                 </div>
 
                 <!-- Photo Upload -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">📸 Unggah Foto (Opsional)</label>
-                    <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-red-500 transition">
-                        <p class="text-sm text-gray-600">Klik atau drag foto di sini</p>
+                    <label class="block text-sm font-semibold text-white mb-2">📸 Unggah Foto (Opsional)</label>
+                    <div id="uploadArea" class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition bg-card-dark">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+                                <span class="material-symbols-outlined text-primary text-3xl">add_a_photo</span>
+                            </div>
+                            <div>
+                                <p class="text-white font-semibold">Klik untuk upload</p>
+                                <p class="text-white/60 text-xs mt-1">atau drag foto di sini</p>
+                            </div>
+                        </div>
                         <input type="file" id="fileInput" class="hidden" accept="image/*">
-                        <p id="fileName" class="text-xs text-gray-500 mt-2"></p>
+                        <p id="fileName" class="text-xs text-emerald-500 mt-3"></p>
                     </div>
+                    
                     <!-- Image Preview -->
-                    <div id="imagePreview" class="hidden mt-3">
-                        <img id="previewImg" src="" alt="Preview" class="w-full h-48 object-cover rounded-lg">
+                    <div id="imagePreview" class="hidden mt-3 relative">
+                        <img id="previewImg" src="" alt="Preview" class="w-full h-48 object-cover rounded-xl">
+                        <button type="button" id="btnRemoveImage" class="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-white text-sm">close</span>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Submit Buttons -->
-                <div class="flex gap-3 pt-4">
-                    <button type="button" id="btnBatal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 px-4 rounded-lg transition">
+                <div class="flex gap-3 pt-4 sticky bottom-0 bg-background-dark pb-4">
+                    <button type="button" id="btnBatal" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
                         Batal
                     </button>
-                    <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition flex items-center justify-center gap-2">
-                        <span>📤 Kirim Laporan</span>
-                        <span id="submitSpinner" class="hidden animate-spin">⏳</span>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                        <span>Kirim Laporan</span>
+                        <span id="submitSpinner" class="hidden">
+                            <span class="material-symbols-outlined animate-spin">progress_activity</span>
+                        </span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Info Laporan -->
-    <div id="modalInfo" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
-            <div id="infoContent" class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-                <!-- Akan diisi oleh JavaScript -->
+    <!-- Modal: Report Detail -->
+    <div id="modalInfo" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0">
+        <div class="w-full max-h-[85vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
+            <!-- Content -->
+            <div id="infoContent" class="p-6 overflow-y-auto" style="max-height: calc(85vh - 80px);">
+                <!-- Will be filled by JavaScript -->
             </div>
-            <div class="bg-gray-50 p-4 flex gap-3 border-t border-gray-200">
-                <button id="btnCloseInfo" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 rounded-lg transition">
+            
+            <!-- Actions -->
+            <div class="bg-card-dark p-4 flex gap-3 border-t border-white/10">
+                <button id="btnCloseInfo" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
                     Tutup
                 </button>
-                <button id="btnDeleteReport" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition hidden">
+                <button id="btnDeleteReport" class="hidden flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
                     🗑️ Hapus
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Add Zone -->
-    <div id="modalAddZone" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div class="bg-gradient-to-r from-purple-600 to-purple-500 text-white p-6">
-                <h2 class="text-2xl font-bold">Tambah Zona Rawan</h2>
-                <p class="text-sm text-purple-100 mt-1">Tandai area berbahaya</p>
-            </div>
-
-            <form id="formAddZone" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nama Zona *</label>
-                    <input type="text" id="zoneName" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required placeholder="Contoh: Jl. Sudirman KM 5">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tipe Bahaya *</label>
-                    <select id="zoneType" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required>
-                        <option value="">-- Pilih Tipe --</option>
-                        <option value="banjir">🌊 Rawan Banjir</option>
-                        <option value="longsor">🏔️ Rawan Longsor</option>
-                        <option value="kriminal">⚠️ Rawan Kriminal</option>
-                        <option value="kecelakaan">🚗 Rawan Kecelakaan</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tingkat Bahaya *</label>
-                    <select id="zoneLevel" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required>
-                        <option value="">-- Pilih Tingkat --</option>
-                        <option value="tinggi">🔴 Tinggi</option>
-                        <option value="sedang">🟡 Sedang</option>
-                        <option value="rendah">🟢 Rendah</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Radius (meter) *</label>
-                    <input type="number" id="zoneRadius" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" required placeholder="500" value="500" min="100" max="5000">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Keterangan</label>
-                    <textarea id="zoneDescription" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 h-20 resize-none" placeholder="Informasi tambahan tentang zona ini..."></textarea>
-                </div>
-                
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p class="text-xs text-gray-600 font-semibold mb-1">📍 Pusat Zona:</p>
-                    <p id="zoneLocation" class="text-sm text-gray-800 font-mono">Akan menggunakan lokasi Anda saat ini</p>
-                </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button type="button" id="btnCancelZone" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 rounded-lg transition">
-                        Batal
-                    </button>
-                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-lg transition">
-                        ➕ Tambah Zona
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Admin Login Modal -->
-    <div id="modalAdmin" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl max-w-sm w-full">
+    <!-- Modal: Admin Login -->
+    <div id="modalAdmin" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-background-dark rounded-2xl overflow-hidden animate-slideup">
             <div class="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-6">
-                <h2 class="text-2xl font-bold">🔐 Admin Login</h2>
-                <p class="text-sm text-gray-300 mt-1">Masuk sebagai administrator</p>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold">🔐 Admin Login</h2>
+                        <p class="text-sm opacity-80 mt-1">Portal manajemen</p>
+                    </div>
+                    <button id="btnCloseAdmin" class="flex items-center justify-center w-10 h-10">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
             </div>
+            
             <form id="formAdminLogin" class="p-6 space-y-4">
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                    <input type="email" id="adminEmail" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required placeholder="admin@info24jam.com">
+                    <label class="block text-sm font-semibold text-white mb-2">Email</label>
+                    <input type="email" id="adminEmail" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none" required placeholder="admin@info24jam.com">
                 </div>
+                
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                    <input type="password" id="adminPassword" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" required placeholder="••••••••">
+                    <label class="block text-sm font-semibold text-white mb-2">Password</label>
+                    <input type="password" id="adminPassword" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none" required placeholder="••••••••">
                 </div>
+                
                 <div class="flex gap-3 pt-2">
-                    <button type="button" id="btnCancelAdmin" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2.5 rounded-lg transition">
+                    <button type="button" id="btnCancelAdmin" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
                         Batal
                     </button>
-                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition">
-                        🔓 Masuk
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition">
+                        Masuk
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Install PWA Prompt -->
-    <div id="installPrompt" class="fixed bottom-24 left-4 right-4 bg-blue-600 text-white rounded-xl shadow-2xl p-4 hidden z-50">
-        <div class="flex items-start gap-3">
+    <!-- PWA Install Prompt -->
+    <div id="installPrompt" class="fixed bottom-28 left-4 right-4 bg-blue-600 text-white rounded-xl shadow-2xl p-4 hidden z-50 animate-slideup">
+        <div class="flex items-start gap-3 mb-3">
             <span class="text-3xl">📱</span>
             <div class="flex-1">
-                <h3 class="font-bold mb-1">Install Info 24 Jam</h3>
-                <p class="text-sm text-blue-100">Akses lebih cepat seperti aplikasi asli!</p>
+                <h3 class="font-bold">Install Info 24 Jam</h3>
+                <p class="text-sm opacity-90">Akses lebih cepat dari layar utama</p>
             </div>
-            <button id="btnCloseInstall" class="text-blue-200 hover:text-white text-xl">✕</button>
+            <button id="btnCloseInstall" class="text-white/80 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
         </div>
-        <div class="flex gap-2 mt-3">
+        <div class="flex gap-2">
             <button id="btnInstallApp" class="flex-1 bg-white text-blue-600 font-semibold py-2 rounded-lg hover:bg-blue-50 transition">
-                ⬇️ Install
+                Install
             </button>
             <button id="btnInstallLater" class="flex-1 bg-blue-700 text-white font-semibold py-2 rounded-lg hover:bg-blue-800 transition">
-                Nanti Saja
+                Nanti
             </button>
         </div>
     </div>
 
-    <!-- PENTING: Load Libraries SEBELUM app.js -->
+    <!-- Loading Bar -->
+    <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-red-500 opacity-0 transition-opacity z-50"></div>
+
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- Main App JS -->
-    <script src="app.js"></script>
     
-    <!-- Register Service Worker -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((registration) => {
-                        console.log('✅ Service Worker registered:', registration.scope);
-                    })
-                    .catch((error) => {
-                        console.error('❌ Service Worker registration failed:', error);
-                    });
-            });
-        }
+        // Use the same app.js code you provided
+        // Just copy-paste your entire app.js content here, or load it externally
+        
+        // For demo purposes, I'll include key initialization
+        console.log('📱 Info 24 Jam PWA Loaded');
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Initializing app...');
+            
+            // Add your initApp() function call here
+            if (typeof initApp === 'function') {
+                initApp();
+            }
+        });
     </script>
+    
+    <!-- Load your app.js -->
+    <script src="app.js"></script>
 </body>
 </html>
