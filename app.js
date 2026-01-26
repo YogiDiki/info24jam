@@ -88,24 +88,89 @@ async function deleteReport(id) {
     if (!confirm('Hapus laporan?')) return;
     
     try {
-        const { error } = await supabaseClient.from('reports').delete().eq('id', id);
+        // 1. Hapus dari database
+        const { error } = await supabaseClient
+            .from('reports')
+            .delete()
+            .eq('id', id);
+        
         if (error) throw error;
         
-        // Remove from map & memory
+        // 2. Hapus dari map (perbaikan)
         const item = reports.get(id);
-        if (item?.marker) map.removeLayer(item.marker);
+        if (item?.marker) {
+            map.removeLayer(item.marker); // Hapus marker dari peta
+            item.marker.remove(); // Pastikan marker benar-benar dihapus
+        }
+        
+        // 3. Hapus dari cache
         reports.delete(id);
         
-        notify('✅ Terhapus!', 'success');
+        notify('✅ Laporan berhasil dihapus!', 'success');
         
-        // Refresh list if open
+        // 4. Refresh tampilan jika modal list terbuka
         if (document.getElementById('modalList')?.classList.contains('show')) {
-            await showReportList();
+            await showReportList(); // Reload data dari database
         }
+        
+        console.log(`✅ Report ${id} deleted successfully`);
+        
     } catch (err) {
         console.error('Delete error:', err);
-        notify('❌ Gagal hapus', 'error');
+        notify('❌ Gagal menghapus laporan', 'error');
     }
+}
+
+async function forceRefreshReports() {
+    console.log('🔄 Force refreshing reports...');
+    
+    // Hapus semua marker dari peta
+    reports.forEach(({ marker }) => {
+        if (marker && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+        }
+    });
+    
+    // Kosongkan cache
+    reports.clear();
+    
+    // Load ulang dari database
+    await loadReports();
+    
+    notify('✅ Data diperbarui', 'success');
+}
+
+// Di dalam updateAdminUI() tambahkan:
+function updateAdminUI() {
+    const btn = document.getElementById('profileBtn');
+    if (btn) {
+        btn.style.background = isAdmin ? '#10b981' : 'transparent';
+        btn.title = isAdmin ? 'Logout' : 'Login Admin';
+        
+        // Tambahkan menu admin jika login
+        if (isAdmin) {
+            addAdminMenu();
+        }
+    }
+}
+
+function addAdminMenu() {
+    // Tambahkan opsi refresh di menu
+    const menuGrid = document.querySelector('.menu-grid');
+    if (!menuGrid || document.getElementById('adminRefreshBtn')) return;
+    
+    const refreshBtn = document.createElement('div');
+    refreshBtn.className = 'menu-item';
+    refreshBtn.id = 'adminRefreshBtn';
+    refreshBtn.innerHTML = `
+        <div class="menu-item-icon">
+            <i class="material-icons">refresh</i>
+        </div>
+        <div class="menu-item-name">Refresh Data</div>
+    `;
+    refreshBtn.onclick = forceRefreshReports;
+    
+    menuGrid.appendChild(refreshBtn);
 }
 
 // Map
