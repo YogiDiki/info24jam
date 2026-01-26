@@ -8,17 +8,10 @@
     
     <title>Info 24 Jam</title>
     
-    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <style>
@@ -43,16 +36,17 @@
             flex-direction: column;
         }
         
-        /* Header */
+        /* Header - REDESIGNED */
         header {
-            background: #000;
-            padding: 12px 16px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            padding: 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #222;
+            border-bottom: 2px solid #ef4444;
             position: relative;
             z-index: 1000;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3);
         }
         
         .header-left {
@@ -62,21 +56,23 @@
         }
         
         .menu-btn, .profile-btn {
-            width: 40px;
-            height: 40px;
-            background: transparent;
-            border: none;
-            color: #fff;
+            width: 44px;
+            height: 44px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #ef4444;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 12px;
             transition: all 0.3s;
         }
         
         .menu-btn:hover, .profile-btn:hover {
-            background: #1a1a1a;
+            background: #ef4444;
+            color: #fff;
+            transform: scale(1.05);
         }
         
         .header-center {
@@ -85,19 +81,54 @@
         }
         
         .header-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #fff;
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #ef4444 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
         }
         
         .header-subtitle {
             font-size: 9px;
             color: #ef4444;
-            font-weight: 600;
-            letter-spacing: 1px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-top: 2px;
         }
         
-        /* Animated Notification System */
+        /* PWA Install Button */
+        .pwa-install-banner {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 12px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 999;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .pwa-install-banner:hover {
+            transform: translateX(-50%) scale(1.05);
+        }
+        
+        .pwa-install-banner i {
+            font-size: 24px;
+        }
+        
+        .pwa-install-text {
+            font-size: 13px;
+            font-weight: 700;
+        }
+        
+        /* Notification */
         .notification {
             position: fixed;
             top: 80px;
@@ -132,48 +163,21 @@
             font-weight: 700;
         }
         
-        .notification-success {
-            border-left: 4px solid #10b981;
-        }
-        
-        .notification-success .notification-icon {
-            background: #10b981;
-            color: #fff;
-        }
-        
-        .notification-error {
-            border-left: 4px solid #ef4444;
-        }
-        
-        .notification-error .notification-icon {
-            background: #ef4444;
-            color: #fff;
-        }
-        
-        .notification-warning {
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .notification-warning .notification-icon {
-            background: #f59e0b;
-            color: #fff;
-        }
-        
-        .notification-info {
-            border-left: 4px solid #3b82f6;
-        }
-        
-        .notification-info .notification-icon {
-            background: #3b82f6;
-            color: #fff;
-        }
+        .notification-success { border-left: 4px solid #10b981; }
+        .notification-success .notification-icon { background: #10b981; color: #fff; }
+        .notification-error { border-left: 4px solid #ef4444; }
+        .notification-error .notification-icon { background: #ef4444; color: #fff; }
+        .notification-warning { border-left: 4px solid #f59e0b; }
+        .notification-warning .notification-icon { background: #f59e0b; color: #fff; }
+        .notification-info { border-left: 4px solid #3b82f6; }
+        .notification-info .notification-icon { background: #3b82f6; color: #fff; }
         
         .notification-message {
             font-size: 14px;
             font-weight: 500;
         }
         
-        /* Search Bar */
+        /* Search */
         .search-container {
             padding: 12px 16px;
             background: #000;
@@ -181,6 +185,8 @@
         
         .search-box {
             position: relative;
+            display: flex;
+            gap: 8px;
         }
         
         .search-icon {
@@ -189,10 +195,11 @@
             top: 50%;
             transform: translateY(-50%);
             color: #666;
+            z-index: 1;
         }
         
         .search-input {
-            width: 100%;
+            flex: 1;
             padding: 14px 14px 14px 46px;
             background: #1a1a1a;
             border: 1px solid #333;
@@ -203,6 +210,24 @@
         
         .search-input::placeholder {
             color: #666;
+        }
+        
+        .search-btn {
+            width: 48px;
+            height: 48px;
+            background: #ef4444;
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .search-btn:hover {
+            background: #dc2626;
         }
         
         /* Filter Chips */
@@ -253,7 +278,7 @@
             display: none !important;
         }
         
-        /* Emergency Button (Small Icon) */
+        /* Buttons */
         .emergency-btn-small {
             position: absolute;
             bottom: 100px;
@@ -277,40 +302,6 @@
             transform: scale(0.9);
         }
         
-        .emergency-btn-small i {
-            font-size: 24px;
-        }
-        
-        /* PWA Install Button */
-        .install-btn {
-            position: absolute;
-            bottom: 160px;
-            left: 16px;
-            padding: 10px 16px;
-            background: #10b981;
-            border: none;
-            border-radius: 24px;
-            color: #fff;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            z-index: 500;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-            transition: all 0.2s;
-        }
-        
-        .install-btn:hover {
-            background: #059669;
-        }
-        
-        .install-btn i {
-            font-size: 16px;
-        }
-        
-        /* FAB */
         .fab {
             position: fixed;
             bottom: 24px;
@@ -386,7 +377,7 @@
             z-index: 500;
         }
         
-        /* Modal Base */
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -455,6 +446,7 @@
             overflow-y: auto;
         }
         
+        /* Form */
         .form-group {
             margin-bottom: 20px;
         }
@@ -516,7 +508,6 @@
             font-family: 'Courier New', monospace;
         }
         
-        /* Image Upload with Preview */
         .upload-area {
             border: 2px dashed #333;
             border-radius: 12px;
@@ -638,7 +629,7 @@
             color: #fff;
         }
         
-        /* Report List Styles */
+        /* Report Cards */
         .report-card {
             background: #1a1a1a;
             border: 1px solid #333;
@@ -748,22 +739,12 @@
             color: #3b82f6;
         }
         
-        /* Statistics Styles */
-        .stats-summary {
-            margin-bottom: 24px;
-        }
-        
-        .stats-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #fff;
-            margin-bottom: 16px;
-        }
-        
+        /* Stats */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
+            margin-bottom: 24px;
         }
         
         .stat-card {
@@ -791,46 +772,7 @@
             color: #666;
         }
         
-        .monthly-chart {
-            margin-top: 24px;
-        }
-        
-        .month-bar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        
-        .month-label {
-            font-size: 12px;
-            color: #aaa;
-            min-width: 80px;
-        }
-        
-        .month-bar-container {
-            flex: 1;
-            height: 32px;
-            background: #1a1a1a;
-            border-radius: 8px;
-            display: flex;
-            overflow: hidden;
-        }
-        
-        .month-bar-segment {
-            height: 100%;
-            transition: width 0.3s;
-        }
-        
-        .month-total {
-            font-size: 14px;
-            font-weight: 700;
-            color: #fff;
-            min-width: 40px;
-            text-align: right;
-        }
-        
-        /* Emergency Modal Styles */
+        /* Emergency */
         .emergency-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -887,42 +829,7 @@
             color: #ef4444;
         }
         
-        /* Login Modal Styles */
-        .login-input-group {
-            position: relative;
-            margin-bottom: 16px;
-        }
-        
-        .login-input-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #666;
-        }
-        
-        .login-input {
-            width: 100%;
-            padding: 14px 14px 14px 46px;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 15px;
-        }
-        
-        .login-input::placeholder {
-            color: #666;
-        }
-        
-        .login-footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        /* Menu Modal Styles */
+        /* Menu */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -937,8 +844,6 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
-            text-decoration: none;
-            color: #fff;
         }
         
         .menu-item:hover {
@@ -968,6 +873,37 @@
             color: #fff;
         }
         
+        /* Login */
+        .login-input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        .login-input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 14px 14px 14px 46px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+        }
+        
+        .login-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
         .hidden {
             display: none;
         }
@@ -975,7 +911,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Header -->
         <header>
             <div class="header-left">
                 <button class="menu-btn" id="menuBtn" title="Menu">
@@ -983,23 +918,29 @@
                 </button>
             </div>
             <div class="header-center">
-                <div class="header-title">Info 24 Jam</div>
-                <div class="header-subtitle">LAYANAN INFORMASI 24 JAM BY EMYDN GROUP</div>
+                <div class="header-title">INFO 24 JAM</div>
+                <div class="header-subtitle">LAYANAN INFORMASI BY EMYDN GROUP</div>
             </div>
             <button class="profile-btn" id="profileBtn" title="Login Admin">
                 <i class="material-icons">account_circle</i>
             </button>
         </header>
 
-        <!-- Search -->
+        <div class="pwa-install-banner hidden" id="pwaInstallBanner">
+            <i class="material-icons">download</i>
+            <div class="pwa-install-text">Install Aplikasi</div>
+        </div>
+
         <div class="search-container">
             <div class="search-box">
                 <i class="material-icons search-icon">search</i>
-                <input type="text" class="search-input" placeholder="Cari lokasi atau kejadian..." id="searchInput">
+                <input type="text" class="search-input" placeholder="Cari laporan..." id="searchInput">
+                <button class="search-btn" id="searchBtn">
+                    <i class="material-icons">arrow_forward</i>
+                </button>
             </div>
         </div>
 
-        <!-- Filter Chips -->
         <div class="filter-chips">
             <div class="filter-chip active" data-filter="">
                 <i class="material-icons">apps</i>
@@ -1031,21 +972,12 @@
             </div>
         </div>
 
-        <!-- Map -->
         <div id="map"></div>
 
-        <!-- PWA Install Button (Small) -->
-        <button class="install-btn hidden" id="btnInstall">
-            <i class="material-icons">download</i>
-            <span>Install App</span>
-        </button>
-
-        <!-- Emergency Button (Small Icon) -->
         <button class="emergency-btn-small" id="btnEmergency" title="Nomor Darurat">
             <i class="material-icons">call</i>
         </button>
 
-        <!-- Map Controls -->
         <div class="map-controls">
             <button class="map-control-btn" id="zoomIn">+</button>
             <button class="map-control-btn" id="zoomOut">−</button>
@@ -1055,7 +987,6 @@
             <i class="material-icons">my_location</i>
         </button>
 
-        <!-- FAB -->
         <button class="fab" id="btnLapor" title="Buat Laporan">
             <i class="material-icons">campaign</i>
         </button>
@@ -1065,7 +996,7 @@
     <div class="modal" id="modalMenu">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn" onclick="document.getElementById('modalMenu').classList.remove('show'); document.body.style.overflow = '';">
+                <button class="back-btn" onclick="closeModal('modalMenu')">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="modal-title-group">
@@ -1082,7 +1013,7 @@
                         <div class="menu-item-name">Daftar Laporan</div>
                     </div>
                     
-                    <div class="menu-item" onclick="document.getElementById('modalMenu').classList.remove('show'); document.getElementById('modalEmergency').classList.add('show');">
+                    <div class="menu-item" onclick="closeModal('modalMenu'); openModal('modalEmergency');">
                         <div class="menu-item-icon">
                             <i class="material-icons">call</i>
                         </div>
@@ -1096,21 +1027,21 @@
                         <div class="menu-item-name">Statistik</div>
                     </div>
                     
-                    <div class="menu-item" onclick="showNotification('Fitur Pengaturan segera hadir!', 'info')">
+                    <div class="menu-item" onclick="notify('Fitur Pengaturan segera hadir!', 'info')">
                         <div class="menu-item-icon">
                             <i class="material-icons">settings</i>
                         </div>
                         <div class="menu-item-name">Pengaturan</div>
                     </div>
                     
-                    <div class="menu-item" onclick="showNotification('Fitur Berita segera hadir!', 'info')">
+                    <div class="menu-item" onclick="notify('Fitur Berita segera hadir!', 'info')">
                         <div class="menu-item-icon">
                             <i class="material-icons">newspaper</i>
                         </div>
                         <div class="menu-item-name">Berita Terkini</div>
                     </div>
                     
-                    <div class="menu-item" onclick="showNotification('Fitur Bantuan segera hadir!', 'info')">
+                    <div class="menu-item" onclick="notify('Fitur Bantuan segera hadir!', 'info')">
                         <div class="menu-item-icon">
                             <i class="material-icons">help</i>
                         </div>
@@ -1125,7 +1056,7 @@
     <div class="modal" id="modalLapor">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn" id="closeModal">
+                <button class="back-btn" onclick="closeModal('modalLapor')">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="modal-title-group">
@@ -1174,7 +1105,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Deskripsi Detail *</label>
-                    <textarea class="form-textarea" placeholder="Ceritakan kronologi atau detail kejadian secara lengkap agar petugas mudah melakukan tindak lanjut..." id="deskripsiDetail" required></textarea>
+                    <textarea class="form-textarea" placeholder="Ceritakan kronologi atau detail kejadian secara lengkap..." id="deskripsiDetail" required></textarea>
                 </div>
 
                 <div class="form-group">
@@ -1216,7 +1147,7 @@
     <div class="modal" id="modalList">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn" onclick="document.getElementById('modalList').classList.remove('show'); document.body.style.overflow = '';">
+                <button class="back-btn" onclick="closeModal('modalList')">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="modal-title-group">
@@ -1225,7 +1156,6 @@
                 </div>
             </div>
             <div class="modal-body" id="reportListContainer">
-                <!-- Reports loaded here -->
             </div>
         </div>
     </div>
@@ -1234,7 +1164,7 @@
     <div class="modal" id="modalStatistics">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn" onclick="document.getElementById('modalStatistics').classList.remove('show'); document.body.style.overflow = '';">
+                <button class="back-btn" onclick="closeModal('modalStatistics')">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="modal-title-group">
@@ -1243,7 +1173,6 @@
                 </div>
             </div>
             <div class="modal-body" id="statisticsCharts">
-                <!-- Statistics charts loaded here -->
             </div>
         </div>
     </div>
@@ -1252,7 +1181,7 @@
     <div class="modal" id="modalEmergency">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn" id="closeEmergency">
+                <button class="back-btn" onclick="closeModal('modalEmergency')">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="modal-title-group">
@@ -1330,7 +1259,7 @@
     <div class="modal" id="modalLogin">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn" id="closeLogin">
+                <button class="back-btn" onclick="closeModal('modalLogin')">
                     <i class="material-icons">arrow_back</i>
                 </button>
                 <div class="modal-title-group">
@@ -1362,19 +1291,8 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // Status option toggle
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.status-option')) {
-                const option = e.target.closest('.status-option');
-                document.querySelectorAll('.status-option').forEach(o => o.classList.remove('active'));
-                option.classList.add('active');
-            }
-        });
-    </script>
     <script src="app.js"></script>
 </body>
 </html>
