@@ -1,4 +1,4 @@
-/* Info 24 Jam - Fixed App.js - Complete Version */
+/* Info 24 Jam - Complete App.js v3.0 */
 
 const CONFIG = {
     SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',
@@ -7,11 +7,21 @@ const CONFIG = {
     CLOUDINARY_PRESET: 'laporan_warga'
 };
 
+// Dummy images for each category (using Unsplash)
+const DUMMY_IMAGES = {
+    banjir: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=800&q=80',
+    kebakaran: 'https://images.unsplash.com/photo-1525771569145-2ab408f2aa84?w=800&q=80',
+    kecelakaan: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&q=80',
+    kriminal: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&q=80',
+    macet: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&q=80'
+};
+
 let map, userMarker, supabaseClient;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let currentReports = new Map();
 let appInitialized = false;
 let isAdmin = false;
+let deferredPrompt = null;
 
 const categoryColors = {
     banjir: '#3B82F6',
@@ -36,6 +46,7 @@ async function initApp() {
         setupEventListeners();
         await loadReports();
         checkAdminStatus();
+        setupPWA();
         console.log('✅ App initialized!');
     } catch (error) {
         console.error('❌ Init error:', error);
@@ -111,11 +122,47 @@ async function submitReport(formData) {
         closeModalLapor();
         alert('✅ Laporan berhasil dikirim!');
         
-        // Reload reports
         await loadReports();
     } catch (error) {
         console.error('❌ Submit error:', error);
         alert('❌ Gagal mengirim laporan');
+    }
+}
+
+// Admin: Delete Report
+async function deleteReport(reportId) {
+    if (!isAdmin) {
+        alert('⚠️ Hanya admin yang bisa menghapus laporan!');
+        return;
+    }
+    
+    if (!confirm('Yakin ingin menghapus laporan ini?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabaseClient
+            .from('reports')
+            .delete()
+            .eq('id', reportId);
+        
+        if (error) throw error;
+        
+        const reportItem = currentReports.get(reportId);
+        if (reportItem && map) {
+            map.removeLayer(reportItem.marker);
+        }
+        currentReports.delete(reportId);
+        
+        alert('✅ Laporan berhasil dihapus!');
+        
+        const modalList = document.getElementById('modalList');
+        if (modalList && modalList.classList.contains('show')) {
+            await showReportList();
+        }
+    } catch (error) {
+        console.error('❌ Delete error:', error);
+        alert('❌ Gagal menghapus laporan');
     }
 }
 
@@ -176,9 +223,10 @@ function addReportToMap(report) {
     }).addTo(map);
     
     const popupContent = `
-        <div style="padding: 8px;">
+        <div style="padding: 8px; min-width: 200px;">
             <strong style="color: ${color};">${report.kategori.toUpperCase()}</strong><br>
             <p style="margin: 8px 0; color: #333;">${report.deskripsi}</p>
+            ${report.foto_url ? `<img src="${report.foto_url}" style="width: 100%; border-radius: 8px; margin: 8px 0;" />` : ''}
             ${report.pelapor_nama ? `<small style="color: #666;">👤 ${report.pelapor_nama}</small><br>` : ''}
             <small style="color: #666;">⏰ ${new Date(report.created_at).toLocaleString('id-ID')}</small>
         </div>
@@ -222,32 +270,32 @@ function getUserLocation() {
 
 // Event Listeners
 function setupEventListeners() {
-    // FAB - Open Modal
+    const menuBtn = document.getElementById('menuBtn');
+    if (menuBtn) {
+        menuBtn.addEventListener('click', showMenu);
+    }
+    
     const btnLapor = document.getElementById('btnLapor');
     if (btnLapor) {
         btnLapor.addEventListener('click', openModalLapor);
     }
     
-    // Close Modal
     const closeModal = document.getElementById('closeModal');
     if (closeModal) {
         closeModal.addEventListener('click', closeModalLapor);
     }
     
-    // Form Submit
     const formLapor = document.getElementById('formLapor');
     if (formLapor) {
         formLapor.addEventListener('submit', handleSubmit);
     }
     
-    // Upload Area
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
     if (uploadArea && fileInput) {
         uploadArea.addEventListener('click', () => fileInput.click());
     }
     
-    // Map Controls
     const zoomIn = document.getElementById('zoomIn');
     const zoomOut = document.getElementById('zoomOut');
     const centerLocation = document.getElementById('centerLocation');
@@ -260,7 +308,6 @@ function setupEventListeners() {
         });
     }
     
-    // Filter Chips
     const filterChips = document.querySelectorAll('.filter-chip');
     filterChips.forEach(chip => {
         chip.addEventListener('click', function() {
@@ -272,42 +319,30 @@ function setupEventListeners() {
         });
     });
     
-    // List Button - NEW
-    const btnList = document.getElementById('btnList');
-    if (btnList) {
-        btnList.addEventListener('click', showReportList);
-    }
-    
-    // Emergency Button - NEW
     const btnEmergency = document.getElementById('btnEmergency');
     if (btnEmergency) {
         btnEmergency.addEventListener('click', showEmergencyModal);
     }
     
-    // Close Emergency Modal - NEW
     const closeEmergency = document.getElementById('closeEmergency');
     if (closeEmergency) {
         closeEmergency.addEventListener('click', closeEmergencyModal);
     }
     
-    // Login Form - NEW
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
     
-    // Close Login Modal - NEW
     const closeLogin = document.getElementById('closeLogin');
     if (closeLogin) {
         closeLogin.addEventListener('click', closeLoginModal);
     }
     
-    // Profile/Login Button - NEW
     const profileBtn = document.getElementById('profileBtn');
     if (profileBtn) {
         profileBtn.addEventListener('click', () => {
             if (isAdmin) {
-                // Show logout or admin panel
                 if (confirm('Logout dari admin?')) {
                     logout();
                 }
@@ -315,6 +350,11 @@ function setupEventListeners() {
                 openLoginModal();
             }
         });
+    }
+    
+    const btnInstall = document.getElementById('btnInstall');
+    if (btnInstall) {
+        btnInstall.addEventListener('click', installPWA);
     }
     
     console.log('✅ Event listeners setup');
@@ -336,7 +376,7 @@ function filterReports(kategori) {
     });
 }
 
-// Modal Functions
+// Modals
 function openModalLapor() {
     const modal = document.getElementById('modalLapor');
     if (modal) {
@@ -351,13 +391,11 @@ function closeModalLapor() {
         modal.classList.remove('show');
         document.body.style.overflow = '';
         
-        // Reset form
         const form = document.getElementById('formLapor');
         if (form) form.reset();
     }
 }
 
-// Handle Form Submit
 async function handleSubmit(e) {
     e.preventDefault();
     
@@ -372,6 +410,8 @@ async function handleSubmit(e) {
         return;
     }
     
+    const fotoUrl = DUMMY_IMAGES[kategori] || null;
+    
     const reportData = {
         kategori,
         deskripsi: `${judul} - ${deskripsi}`,
@@ -379,14 +419,31 @@ async function handleSubmit(e) {
         longitude: userLocation.lng,
         pelapor_nama: pelaporNama,
         pelapor_kontak: pelaporKontak,
-        foto_url: null,
+        foto_url: fotoUrl,
         created_at: new Date().toISOString()
     };
     
     await submitReport(reportData);
 }
 
-// NEW: Report List Modal
+// Menu Modal
+function showMenu() {
+    const modal = document.getElementById('modalMenu');
+    if (modal) {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeMenuModal() {
+    const modal = document.getElementById('modalMenu');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+// Report List
 async function showReportList() {
     if (!supabaseClient) return;
     
@@ -404,7 +461,6 @@ async function showReportList() {
         
         if (!modal || !listContainer) return;
         
-        // Clear previous list
         listContainer.innerHTML = '';
         
         if (!data || data.length === 0) {
@@ -442,7 +498,9 @@ function createReportCard(report) {
         <div class="report-card-header" style="background: linear-gradient(135deg, ${color}22, ${color}11);">
             <div class="report-badge" style="background: ${color};">${report.kategori.toUpperCase()}</div>
             <div class="report-time">⏰ ${dateStr}</div>
+            ${isAdmin ? `<button class="delete-btn" onclick="deleteReport(${report.id})" title="Hapus Laporan">🗑️</button>` : ''}
         </div>
+        ${report.foto_url ? `<img src="${report.foto_url}" class="report-image" alt="${report.kategori}" />` : ''}
         <div class="report-card-body">
             <h3 class="report-title">${report.deskripsi.split(' - ')[0] || 'Laporan'}</h3>
             <p class="report-desc">${report.deskripsi}</p>
@@ -459,13 +517,13 @@ function createReportCard(report) {
         </div>
     `;
     
-    div.addEventListener('click', () => {
-        // Close modal and center map on this report
+    div.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn')) return;
+        
         closeListModal();
         if (map) {
             map.setView([report.latitude, report.longitude], 16);
             
-            // Open popup for this report
             const reportItem = currentReports.get(report.id);
             if (reportItem && reportItem.marker) {
                 reportItem.marker.openPopup();
@@ -484,7 +542,7 @@ function closeListModal() {
     }
 }
 
-// NEW: Emergency Modal
+// Emergency Modal
 function showEmergencyModal() {
     const modal = document.getElementById('modalEmergency');
     if (modal) {
@@ -501,7 +559,7 @@ function closeEmergencyModal() {
     }
 }
 
-// NEW: Login Functions
+// Login
 function openLoginModal() {
     const modal = document.getElementById('modalLogin');
     if (modal) {
@@ -529,7 +587,6 @@ async function handleLogin(e) {
         return;
     }
     
-    // Simple admin check (you should use proper auth in production)
     if (username === 'admin' && password === 'admin123') {
         isAdmin = true;
         localStorage.setItem('info24jam_admin', 'true');
@@ -537,7 +594,6 @@ async function handleLogin(e) {
         closeLoginModal();
         alert('✅ Login berhasil! Selamat datang Admin.');
         
-        // Update UI
         updateAdminUI();
     } else {
         alert('❌ Username atau password salah!');
@@ -572,9 +628,53 @@ function updateAdminUI() {
     }
 }
 
-// Close modals when clicking outside
+// PWA
+function setupPWA() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('✅ Service Worker registered'))
+                .catch(err => console.log('❌ Service Worker error:', err));
+        });
+    }
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        const btnInstall = document.getElementById('btnInstall');
+        if (btnInstall) {
+            btnInstall.classList.remove('hidden');
+        }
+    });
+    
+    window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA installed');
+        deferredPrompt = null;
+        
+        const btnInstall = document.getElementById('btnInstall');
+        if (btnInstall) {
+            btnInstall.classList.add('hidden');
+        }
+    });
+}
+
+async function installPWA() {
+    if (!deferredPrompt) {
+        alert('Aplikasi sudah terinstall atau tidak support PWA');
+        return;
+    }
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    
+    console.log(`Install: ${outcome}`);
+    deferredPrompt = null;
+}
+
+// Close modals on outside click
 document.addEventListener('click', (e) => {
-    const modals = ['modalLapor', 'modalList', 'modalEmergency', 'modalLogin'];
+    const modals = ['modalLapor', 'modalList', 'modalEmergency', 'modalLogin', 'modalMenu'];
     modals.forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal && e.target === modal) {
@@ -584,7 +684,7 @@ document.addEventListener('click', (e) => {
     });
 });
 
-// Initialize on DOM ready
+// Init
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
