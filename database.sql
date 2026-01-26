@@ -3,14 +3,17 @@
 
 CREATE TABLE IF NOT EXISTS public.reports (
     id BIGSERIAL PRIMARY KEY,
-    kategori TEXT NOT NULL CHECK (kategori IN ('banjir', 'kebakaran', 'kecelakaan', 'kriminal', 'macet')),
+    kategori TEXT NOT NULL CHECK (kategori IN ('banjir', 'kebakaran', 'kecelakaan', 'kriminal', 'macet', 'lainnya')),
     deskripsi TEXT NOT NULL,
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
     
-    -- NEW: Reporter Information
+    -- Reporter Information
     pelapor_nama TEXT NOT NULL,
     pelapor_kontak TEXT NOT NULL,
+    
+    -- Contributor Status: relawan or instansi (removed user biasa)
+    kontributor_status TEXT DEFAULT 'relawan' CHECK (kontributor_status IN ('relawan', 'instansi')),
     
     foto_url TEXT,
     verified BOOLEAN DEFAULT FALSE,
@@ -65,14 +68,17 @@ CREATE TRIGGER update_reports_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample data (optional)
-INSERT INTO public.reports (kategori, deskripsi, latitude, longitude, pelapor_nama, pelapor_kontak, verified, status) VALUES
-('banjir', 'Banjir Besar - Banjir setinggi 1 meter di kawasan perumahan', -6.2088, 106.8456, 'Budi Santoso', '081234567890', true, 'verified'),
-('kebakaran', 'Kebakaran Ruko - Kebakaran di ruko 3 lantai, warga diminta mengungsi', -6.1944, 106.8229, 'Siti Nurhaliza', '081234567891', true, 'verified'),
-('kecelakaan', 'Kecelakaan Beruntun - Kecelakaan beruntun 5 mobil di tol', -6.2297, 106.8408, 'Ahmad Rifai', '081234567892', false, 'pending');
+INSERT INTO public.reports (kategori, deskripsi, latitude, longitude, pelapor_nama, pelapor_kontak, kontributor_status, verified, status) VALUES
+('banjir', 'Banjir Besar - Banjir setinggi 1 meter di kawasan perumahan', -6.2088, 106.8456, 'Budi Santoso', '081234567890', 'relawan', true, 'verified'),
+('kebakaran', 'Kebakaran Ruko - Kebakaran di ruko 3 lantai, warga diminta mengungsi', -6.1944, 106.8229, 'Siti Nurhaliza', '081234567891', 'instansi', true, 'verified'),
+('kecelakaan', 'Kecelakaan Beruntun - Kecelakaan beruntun 5 mobil di tol', -6.2297, 106.8408, 'Ahmad Rifai', '081234567892', 'relawan', false, 'pending'),
+('macet', 'Kemacetan Parah - Macet total di Jl. Sudirman akibat demo', -6.2088, 106.8200, 'Dedi Cahyadi', '081234567893', 'relawan', true, 'verified'),
+('lainnya', 'Tiang Listrik Tumbang - Menimpa 2 kendaraan', -6.1850, 106.8350, 'Rina Susanti', '081234567894', 'instansi', false, 'pending');
 
 -- Comments
 COMMENT ON TABLE public.reports IS 'Tabel untuk menyimpan laporan warga';
 COMMENT ON COLUMN public.reports.pelapor_nama IS 'Nama lengkap pelapor untuk mencegah laporan hoax';
 COMMENT ON COLUMN public.reports.pelapor_kontak IS 'Nomor HP/WA pelapor untuk verifikasi';
+COMMENT ON COLUMN public.reports.kontributor_status IS 'Status kontributor: relawan atau instansi';
 COMMENT ON COLUMN public.reports.verified IS 'Status verifikasi laporan oleh admin';
 COMMENT ON COLUMN public.reports.status IS 'Status penanganan laporan: pending, verified, resolved, rejected';

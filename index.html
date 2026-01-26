@@ -85,16 +85,92 @@
         }
         
         .header-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             color: #fff;
         }
         
         .header-subtitle {
-            font-size: 10px;
+            font-size: 9px;
             color: #ef4444;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        /* Animated Notification System */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 16px;
+            background: #fff;
+            color: #000;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .notification-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
             font-weight: 700;
-            letter-spacing: 2px;
+        }
+        
+        .notification-success {
+            border-left: 4px solid #10b981;
+        }
+        
+        .notification-success .notification-icon {
+            background: #10b981;
+            color: #fff;
+        }
+        
+        .notification-error {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .notification-error .notification-icon {
+            background: #ef4444;
+            color: #fff;
+        }
+        
+        .notification-warning {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .notification-warning .notification-icon {
+            background: #f59e0b;
+            color: #fff;
+        }
+        
+        .notification-info {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .notification-info .notification-icon {
+            background: #3b82f6;
+            color: #fff;
+        }
+        
+        .notification-message {
+            font-size: 14px;
+            font-weight: 500;
         }
         
         /* Search Bar */
@@ -177,7 +253,7 @@
             display: none !important;
         }
         
-        /* Emergency Button (Small Icon) - NEW */
+        /* Emergency Button (Small Icon) */
         .emergency-btn-small {
             position: absolute;
             bottom: 100px;
@@ -205,7 +281,7 @@
             font-size: 24px;
         }
         
-        /* PWA Install Button - NEW */
+        /* PWA Install Button */
         .install-btn {
             position: absolute;
             bottom: 160px;
@@ -440,6 +516,7 @@
             font-family: 'Courier New', monospace;
         }
         
+        /* Image Upload with Preview */
         .upload-area {
             border: 2px dashed #333;
             border-radius: 12px;
@@ -447,6 +524,12 @@
             text-align: center;
             cursor: pointer;
             background: #1a1a1a;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #ef4444;
+            background: #222;
         }
         
         .upload-icon {
@@ -475,6 +558,28 @@
         .upload-subtitle {
             font-size: 12px;
             color: #666;
+        }
+        
+        #imagePreview {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .remove-image-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            background: rgba(239, 68, 68, 0.9);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .submit-btn {
@@ -611,6 +716,7 @@
             display: flex;
             gap: 16px;
             flex-wrap: wrap;
+            align-items: center;
         }
         
         .report-meta-item {
@@ -623,6 +729,105 @@
         
         .report-meta-item i {
             font-size: 16px;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-badge.relawan {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .status-badge.instansi {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+        
+        /* Statistics Styles */
+        .stats-summary {
+            margin-bottom: 24px;
+        }
+        
+        .stats-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-card i {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .monthly-chart {
+            margin-top: 24px;
+        }
+        
+        .month-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .month-label {
+            font-size: 12px;
+            color: #aaa;
+            min-width: 80px;
+        }
+        
+        .month-bar-container {
+            flex: 1;
+            height: 32px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        .month-bar-segment {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .month-total {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            min-width: 40px;
+            text-align: right;
         }
         
         /* Emergency Modal Styles */
@@ -717,7 +922,7 @@
             color: #666;
         }
         
-        /* Menu Modal Styles - NEW */
+        /* Menu Modal Styles */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -779,7 +984,7 @@
             </div>
             <div class="header-center">
                 <div class="header-title">Info 24 Jam</div>
-                <div class="header-subtitle">EMYDN GROUP</div>
+                <div class="header-subtitle">LAYANAN INFORMASI 24 JAM BY EMYDN GROUP</div>
             </div>
             <button class="profile-btn" id="profileBtn" title="Login Admin">
                 <i class="material-icons">account_circle</i>
@@ -790,7 +995,7 @@
         <div class="search-container">
             <div class="search-box">
                 <i class="material-icons search-icon">search</i>
-                <input type="text" class="search-input" placeholder="Cari area atau kejadian..." id="searchInput">
+                <input type="text" class="search-input" placeholder="Cari lokasi atau kejadian..." id="searchInput">
             </div>
         </div>
 
@@ -820,18 +1025,22 @@
                 <i class="material-icons">traffic</i>
                 <span>Macet</span>
             </div>
+            <div class="filter-chip" data-filter="lainnya">
+                <i class="material-icons">more_horiz</i>
+                <span>Lainnya</span>
+            </div>
         </div>
 
         <!-- Map -->
         <div id="map"></div>
 
-        <!-- PWA Install Button (Small) - NEW -->
+        <!-- PWA Install Button (Small) -->
         <button class="install-btn hidden" id="btnInstall">
             <i class="material-icons">download</i>
             <span>Install App</span>
         </button>
 
-        <!-- Emergency Button (Small Icon) - NEW -->
+        <!-- Emergency Button (Small Icon) -->
         <button class="emergency-btn-small" id="btnEmergency" title="Nomor Darurat">
             <i class="material-icons">call</i>
         </button>
@@ -852,7 +1061,7 @@
         </button>
     </div>
 
-    <!-- Modal Menu - NEW -->
+    <!-- Modal Menu -->
     <div class="modal" id="modalMenu">
         <div class="modal-content">
             <div class="modal-header">
@@ -880,28 +1089,28 @@
                         <div class="menu-item-name">Nomor Darurat</div>
                     </div>
                     
-                    <div class="menu-item" onclick="alert('Fitur Statistik segera hadir!')">
+                    <div class="menu-item" onclick="showStatistics()">
                         <div class="menu-item-icon">
                             <i class="material-icons">bar_chart</i>
                         </div>
                         <div class="menu-item-name">Statistik</div>
                     </div>
                     
-                    <div class="menu-item" onclick="alert('Fitur Pengaturan segera hadir!')">
+                    <div class="menu-item" onclick="showNotification('Fitur Pengaturan segera hadir!', 'info')">
                         <div class="menu-item-icon">
                             <i class="material-icons">settings</i>
                         </div>
                         <div class="menu-item-name">Pengaturan</div>
                     </div>
                     
-                    <div class="menu-item" onclick="alert('Fitur Berita segera hadir!')">
+                    <div class="menu-item" onclick="showNotification('Fitur Berita segera hadir!', 'info')">
                         <div class="menu-item-icon">
                             <i class="material-icons">newspaper</i>
                         </div>
                         <div class="menu-item-name">Berita Terkini</div>
                     </div>
                     
-                    <div class="menu-item" onclick="alert('Fitur Bantuan segera hadir!')">
+                    <div class="menu-item" onclick="showNotification('Fitur Bantuan segera hadir!', 'info')">
                         <div class="menu-item-icon">
                             <i class="material-icons">help</i>
                         </div>
@@ -959,6 +1168,7 @@
                         <option value="kecelakaan">🚗 Kecelakaan</option>
                         <option value="kriminal">⚠️ Kriminal</option>
                         <option value="macet">🚦 Kemacetan</option>
+                        <option value="lainnya">📌 Lainnya</option>
                     </select>
                 </div>
 
@@ -968,13 +1178,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Lampiran Foto / Video</label>
+                    <label class="form-label">Lampiran Foto</label>
+                    <div id="imagePreview" class="hidden"></div>
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">
                             <i class="material-icons">add_a_photo</i>
                         </div>
-                        <div class="upload-title">Unggah Bukti</div>
-                        <div class="upload-subtitle">Gambar otomatis sesuai kategori</div>
+                        <div class="upload-title">Unggah Bukti (Opsional)</div>
+                        <div class="upload-subtitle">Klik untuk ambil foto atau pilih dari galeri</div>
                         <input type="file" id="fileInput" class="hidden" accept="image/*">
                     </div>
                 </div>
@@ -987,15 +1198,11 @@
                 <div class="contributor-status">
                     <div class="status-title">STATUS KONTRIBUTOR</div>
                     <div class="status-options">
-                        <div class="status-option">
-                            <i class="material-icons" style="vertical-align: middle; font-size: 16px;">person</i>
-                            User Biasa
-                        </div>
-                        <div class="status-option active">
+                        <div class="status-option active" data-status="relawan">
                             <i class="material-icons" style="vertical-align: middle; font-size: 16px;">verified</i>
                             Relawan
                         </div>
-                        <div class="status-option">
+                        <div class="status-option" data-status="instansi">
                             <i class="material-icons" style="vertical-align: middle; font-size: 16px;">business</i>
                             Instansi
                         </div>
@@ -1019,6 +1226,24 @@
             </div>
             <div class="modal-body" id="reportListContainer">
                 <!-- Reports loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Statistics -->
+    <div class="modal" id="modalStatistics">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="back-btn" onclick="document.getElementById('modalStatistics').classList.remove('show'); document.body.style.overflow = '';">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <div class="modal-title-group">
+                    <div class="modal-title">Statistik Laporan</div>
+                    <div class="modal-subtitle">ANALYTICS</div>
+                </div>
+            </div>
+            <div class="modal-body" id="statisticsCharts">
+                <!-- Statistics charts loaded here -->
             </div>
         </div>
     </div>
@@ -1140,6 +1365,16 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Status option toggle
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.status-option')) {
+                const option = e.target.closest('.status-option');
+                document.querySelectorAll('.status-option').forEach(o => o.classList.remove('active'));
+                option.classList.add('active');
+            }
+        });
+    </script>
     <script src="app.js"></script>
 </body>
 </html>

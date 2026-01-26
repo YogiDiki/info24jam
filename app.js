@@ -1,4 +1,4 @@
-/* Info 24 Jam - Complete App.js v3.0 */
+/* Info 24 Jam - Complete App.js v3.1 */
 
 const CONFIG = {
     SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',
@@ -7,28 +7,22 @@ const CONFIG = {
     CLOUDINARY_PRESET: 'laporan_warga'
 };
 
-// Dummy images for each category (using Unsplash)
-const DUMMY_IMAGES = {
-    banjir: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?w=800&q=80',
-    kebakaran: 'https://images.unsplash.com/photo-1525771569145-2ab408f2aa84?w=800&q=80',
-    kecelakaan: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&q=80',
-    kriminal: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800&q=80',
-    macet: 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&q=80'
-};
-
 let map, userMarker, supabaseClient;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let currentReports = new Map();
+let allReportsData = [];
 let appInitialized = false;
 let isAdmin = false;
 let deferredPrompt = null;
+let uploadedImageUrl = null;
 
 const categoryColors = {
     banjir: '#3B82F6',
     kebakaran: '#EF4444',
     kecelakaan: '#FBBF24',
     kriminal: '#8B5CF6',
-    macet: '#F59E0B'
+    macet: '#F59E0B',
+    lainnya: '#6B7280'
 };
 
 // Initialize App
@@ -98,6 +92,8 @@ async function loadReports() {
         if (error) throw error;
         
         currentReports.clear();
+        allReportsData = data || [];
+        
         if (data) {
             data.forEach(report => addReportToMap(report));
             console.log(`✅ Loaded ${data.length} reports`);
@@ -120,19 +116,19 @@ async function submitReport(formData) {
         
         console.log('✅ Report submitted');
         closeModalLapor();
-        alert('✅ Laporan berhasil dikirim!');
+        showNotification('✅ Laporan berhasil dikirim!', 'success');
         
         await loadReports();
     } catch (error) {
         console.error('❌ Submit error:', error);
-        alert('❌ Gagal mengirim laporan');
+        showNotification('❌ Gagal mengirim laporan', 'error');
     }
 }
 
-// Admin: Delete Report
+// Admin: Delete Report - FIXED
 async function deleteReport(reportId) {
     if (!isAdmin) {
-        alert('⚠️ Hanya admin yang bisa menghapus laporan!');
+        showNotification('⚠️ Hanya admin yang bisa menghapus laporan!', 'warning');
         return;
     }
     
@@ -148,22 +144,56 @@ async function deleteReport(reportId) {
         
         if (error) throw error;
         
+        // Remove from map
         const reportItem = currentReports.get(reportId);
         if (reportItem && map) {
             map.removeLayer(reportItem.marker);
         }
         currentReports.delete(reportId);
         
-        alert('✅ Laporan berhasil dihapus!');
+        // Remove from allReportsData
+        allReportsData = allReportsData.filter(r => r.id !== reportId);
         
+        showNotification('✅ Laporan berhasil dihapus!', 'success');
+        
+        // Reload list if open
         const modalList = document.getElementById('modalList');
         if (modalList && modalList.classList.contains('show')) {
             await showReportList();
         }
     } catch (error) {
         console.error('❌ Delete error:', error);
-        alert('❌ Gagal menghapus laporan');
+        showNotification('❌ Gagal menghapus laporan', 'error');
     }
+}
+
+// Animated Notification System - NEW
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const icons = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+    
+    notification.innerHTML = `
+        <div class="notification-icon">${icons[type] || icons.info}</div>
+        <div class="notification-message">${message}</div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Auto remove after 3s
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 // Map
@@ -290,10 +320,18 @@ function setupEventListeners() {
         formLapor.addEventListener('submit', handleSubmit);
     }
     
+    // File Upload with Preview - FIXED
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
     if (uploadArea && fileInput) {
         uploadArea.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                await handleFileUpload(file);
+            }
+        });
     }
     
     const zoomIn = document.getElementById('zoomIn');
@@ -357,7 +395,104 @@ function setupEventListeners() {
         btnInstall.addEventListener('click', installPWA);
     }
     
+    // Search functionality - FIXED
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', handleSearch);
+    }
+    
     console.log('✅ Event listeners setup');
+}
+
+// Search Function - NEW
+function handleSearch(e) {
+    const query = e.target.value.toLowerCase().trim();
+    
+    if (!query) {
+        // Show all markers
+        currentReports.forEach((item) => {
+            if (!map.hasLayer(item.marker)) {
+                item.marker.addTo(map);
+            }
+        });
+        return;
+    }
+    
+    // Search in reports
+    currentReports.forEach((item) => {
+        const report = item.data;
+        const searchText = `
+            ${report.kategori} 
+            ${report.deskripsi} 
+            ${report.pelapor_nama || ''}
+        `.toLowerCase();
+        
+        if (searchText.includes(query)) {
+            if (!map.hasLayer(item.marker)) {
+                item.marker.addTo(map);
+            }
+        } else {
+            if (map.hasLayer(item.marker)) {
+                map.removeLayer(item.marker);
+            }
+        }
+    });
+}
+
+// File Upload with Preview - FIXED
+async function handleFileUpload(file) {
+    const preview = document.getElementById('imagePreview');
+    const uploadArea = document.getElementById('uploadArea');
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        preview.innerHTML = `
+            <img src="${e.target.result}" style="width: 100%; border-radius: 12px;" />
+            <button type="button" class="remove-image-btn" onclick="removeImage()">
+                <i class="material-icons">close</i>
+            </button>
+        `;
+        preview.classList.remove('hidden');
+        uploadArea.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+    
+    // Upload to Cloudinary
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CONFIG.CLOUDINARY_PRESET);
+        
+        const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${CONFIG.CLOUDINARY_CLOUD}/image/upload`,
+            {
+                method: 'POST',
+                body: formData
+            }
+        );
+        
+        const data = await response.json();
+        uploadedImageUrl = data.secure_url;
+        
+        console.log('✅ Image uploaded:', uploadedImageUrl);
+        showNotification('✅ Gambar berhasil diupload!', 'success');
+    } catch (error) {
+        console.error('❌ Upload error:', error);
+        showNotification('❌ Gagal upload gambar', 'error');
+    }
+}
+
+function removeImage() {
+    const preview = document.getElementById('imagePreview');
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    
+    preview.innerHTML = '';
+    preview.classList.add('hidden');
+    uploadArea.classList.remove('hidden');
+    fileInput.value = '';
+    uploadedImageUrl = null;
 }
 
 function filterReports(kategori) {
@@ -393,6 +528,9 @@ function closeModalLapor() {
         
         const form = document.getElementById('formLapor');
         if (form) form.reset();
+        
+        // Reset image
+        removeImage();
     }
 }
 
@@ -404,13 +542,12 @@ async function handleSubmit(e) {
     const deskripsi = document.getElementById('deskripsiDetail')?.value;
     const pelaporNama = document.getElementById('pelaporNama')?.value;
     const pelaporKontak = document.getElementById('pelaporKontak')?.value;
+    const kontributorStatus = document.querySelector('.status-option.active')?.dataset.status || 'relawan';
     
     if (!judul || !kategori || !deskripsi || !pelaporNama || !pelaporKontak) {
-        alert('⚠️ Semua field harus diisi!');
+        showNotification('⚠️ Semua field harus diisi!', 'warning');
         return;
     }
-    
-    const fotoUrl = DUMMY_IMAGES[kategori] || null;
     
     const reportData = {
         kategori,
@@ -419,7 +556,8 @@ async function handleSubmit(e) {
         longitude: userLocation.lng,
         pelapor_nama: pelaporNama,
         pelapor_kontak: pelaporKontak,
-        foto_url: fotoUrl,
+        kontributor_status: kontributorStatus,
+        foto_url: uploadedImageUrl,
         created_at: new Date().toISOString()
     };
     
@@ -441,6 +579,153 @@ function closeMenuModal() {
         modal.classList.remove('show');
         document.body.style.overflow = '';
     }
+}
+
+// Statistics Modal - NEW
+async function showStatistics() {
+    const modal = document.getElementById('modalStatistics');
+    if (!modal) return;
+    
+    // Calculate statistics
+    const stats = calculateMonthlyStatistics();
+    
+    // Render charts
+    renderStatisticsCharts(stats);
+    
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function calculateMonthlyStatistics() {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const monthlyData = {};
+    
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+        const date = new Date(currentYear, currentMonth - i, 1);
+        const key = date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+        monthlyData[key] = {
+            banjir: 0,
+            kebakaran: 0,
+            kecelakaan: 0,
+            kriminal: 0,
+            macet: 0,
+            lainnya: 0,
+            total: 0
+        };
+    }
+    
+    // Count reports
+    allReportsData.forEach(report => {
+        const reportDate = new Date(report.created_at);
+        const key = reportDate.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+        
+        if (monthlyData[key]) {
+            const kategori = report.kategori || 'lainnya';
+            monthlyData[key][kategori]++;
+            monthlyData[key].total++;
+        }
+    });
+    
+    return monthlyData;
+}
+
+function renderStatisticsCharts(stats) {
+    const container = document.getElementById('statisticsCharts');
+    if (!container) return;
+    
+    const months = Object.keys(stats);
+    const categories = ['banjir', 'kebakaran', 'kecelakaan', 'kriminal', 'macet', 'lainnya'];
+    
+    let html = '<div class="stats-summary">';
+    
+    // Total summary
+    let grandTotal = 0;
+    const categoryTotals = {};
+    
+    categories.forEach(cat => {
+        categoryTotals[cat] = 0;
+        months.forEach(month => {
+            categoryTotals[cat] += stats[month][cat];
+            grandTotal += stats[month][cat];
+        });
+    });
+    
+    html += `<h3 class="stats-title">Total Laporan: ${grandTotal}</h3>`;
+    html += '<div class="stats-grid">';
+    
+    const categoryIcons = {
+        banjir: 'water',
+        kebakaran: 'local_fire_department',
+        kecelakaan: 'directions_car',
+        kriminal: 'gavel',
+        macet: 'traffic',
+        lainnya: 'more_horiz'
+    };
+    
+    const categoryNames = {
+        banjir: 'Banjir',
+        kebakaran: 'Kebakaran',
+        kecelakaan: 'Kecelakaan',
+        kriminal: 'Kriminal',
+        macet: 'Macet',
+        lainnya: 'Lainnya'
+    };
+    
+    categories.forEach(cat => {
+        const color = categoryColors[cat];
+        html += `
+            <div class="stat-card" style="border-color: ${color};">
+                <i class="material-icons" style="color: ${color};">${categoryIcons[cat]}</i>
+                <div class="stat-number">${categoryTotals[cat]}</div>
+                <div class="stat-label">${categoryNames[cat]}</div>
+            </div>
+        `;
+    });
+    
+    html += '</div></div>';
+    
+    // Monthly chart
+    html += '<div class="monthly-chart">';
+    html += '<h3 class="stats-title">Laporan per Bulan</h3>';
+    
+    months.forEach(month => {
+        const monthData = stats[month];
+        const total = monthData.total;
+        
+        html += `
+            <div class="month-bar">
+                <div class="month-label">${month}</div>
+                <div class="month-bar-container">
+        `;
+        
+        categories.forEach(cat => {
+            const count = monthData[cat];
+            if (count > 0) {
+                const width = total > 0 ? (count / total * 100) : 0;
+                const color = categoryColors[cat];
+                html += `
+                    <div class="month-bar-segment" 
+                         style="width: ${width}%; background: ${color};"
+                         title="${categoryNames[cat]}: ${count}">
+                    </div>
+                `;
+            }
+        });
+        
+        html += `
+                </div>
+                <div class="month-total">${total}</div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    container.innerHTML = html;
 }
 
 // Report List
@@ -476,7 +761,7 @@ async function showReportList() {
         document.body.style.overflow = 'hidden';
     } catch (error) {
         console.error('❌ Error loading report list:', error);
-        alert('Gagal memuat daftar laporan');
+        showNotification('Gagal memuat daftar laporan', 'error');
     }
 }
 
@@ -494,13 +779,17 @@ function createReportCard(report) {
         minute: '2-digit'
     });
     
+    const statusBadge = report.kontributor_status === 'relawan' 
+        ? '<span class="status-badge relawan">🎖️ Relawan</span>'
+        : '<span class="status-badge instansi">🏢 Instansi</span>';
+    
     div.innerHTML = `
         <div class="report-card-header" style="background: linear-gradient(135deg, ${color}22, ${color}11);">
             <div class="report-badge" style="background: ${color};">${report.kategori.toUpperCase()}</div>
             <div class="report-time">⏰ ${dateStr}</div>
             ${isAdmin ? `<button class="delete-btn" onclick="deleteReport(${report.id})" title="Hapus Laporan">🗑️</button>` : ''}
         </div>
-        ${report.foto_url ? `<img src="${report.foto_url}" class="report-image" alt="${report.kategori}" />` : ''}
+        ${report.foto_url ? `<img src="${report.foto_url}" class="report-image" alt="${report.kategori}" onerror="this.style.display='none'" />` : ''}
         <div class="report-card-body">
             <h3 class="report-title">${report.deskripsi.split(' - ')[0] || 'Laporan'}</h3>
             <p class="report-desc">${report.deskripsi}</p>
@@ -510,8 +799,7 @@ function createReportCard(report) {
                     <span>${report.pelapor_nama || 'Anonim'}</span>
                 </div>
                 <div class="report-meta-item">
-                    <i class="material-icons">location_on</i>
-                    <span>${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</span>
+                    ${statusBadge}
                 </div>
             </div>
         </div>
@@ -583,7 +871,7 @@ async function handleLogin(e) {
     const password = document.getElementById('loginPassword')?.value;
     
     if (!username || !password) {
-        alert('⚠️ Username dan password harus diisi!');
+        showNotification('⚠️ Username dan password harus diisi!', 'warning');
         return;
     }
     
@@ -592,11 +880,11 @@ async function handleLogin(e) {
         localStorage.setItem('info24jam_admin', 'true');
         
         closeLoginModal();
-        alert('✅ Login berhasil! Selamat datang Admin.');
+        showNotification('✅ Login berhasil! Selamat datang Admin.', 'success');
         
         updateAdminUI();
     } else {
-        alert('❌ Username atau password salah!');
+        showNotification('❌ Username atau password salah!', 'error');
     }
 }
 
@@ -604,7 +892,7 @@ function logout() {
     isAdmin = false;
     localStorage.removeItem('info24jam_admin');
     updateAdminUI();
-    alert('✅ Logout berhasil');
+    showNotification('✅ Logout berhasil', 'success');
 }
 
 function checkAdminStatus() {
@@ -661,7 +949,7 @@ function setupPWA() {
 
 async function installPWA() {
     if (!deferredPrompt) {
-        alert('Aplikasi sudah terinstall atau tidak support PWA');
+        showNotification('Aplikasi sudah terinstall atau tidak support PWA', 'info');
         return;
     }
     
@@ -674,7 +962,7 @@ async function installPWA() {
 
 // Close modals on outside click
 document.addEventListener('click', (e) => {
-    const modals = ['modalLapor', 'modalList', 'modalEmergency', 'modalLogin', 'modalMenu'];
+    const modals = ['modalLapor', 'modalList', 'modalEmergency', 'modalLogin', 'modalMenu', 'modalStatistics'];
     modals.forEach(modalId => {
         const modal = document.getElementById(modalId);
         if (modal && e.target === modal) {
