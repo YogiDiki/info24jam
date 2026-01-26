@@ -1,4 +1,4 @@
-/* Info 24 Jam - Fixed App.js */
+/* Info 24 Jam - Fixed App.js - Complete Version */
 
 const CONFIG = {
     SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',
@@ -11,6 +11,7 @@ let map, userMarker, supabaseClient;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let currentReports = new Map();
 let appInitialized = false;
+let isAdmin = false;
 
 const categoryColors = {
     banjir: '#3B82F6',
@@ -34,6 +35,7 @@ async function initApp() {
         getUserLocation();
         setupEventListeners();
         await loadReports();
+        checkAdminStatus();
         console.log('✅ App initialized!');
     } catch (error) {
         console.error('❌ Init error:', error);
@@ -108,6 +110,9 @@ async function submitReport(formData) {
         console.log('✅ Report submitted');
         closeModalLapor();
         alert('✅ Laporan berhasil dikirim!');
+        
+        // Reload reports
+        await loadReports();
     } catch (error) {
         console.error('❌ Submit error:', error);
         alert('❌ Gagal mengirim laporan');
@@ -174,6 +179,7 @@ function addReportToMap(report) {
         <div style="padding: 8px;">
             <strong style="color: ${color};">${report.kategori.toUpperCase()}</strong><br>
             <p style="margin: 8px 0; color: #333;">${report.deskripsi}</p>
+            ${report.pelapor_nama ? `<small style="color: #666;">👤 ${report.pelapor_nama}</small><br>` : ''}
             <small style="color: #666;">⏰ ${new Date(report.created_at).toLocaleString('id-ID')}</small>
         </div>
     `;
@@ -266,6 +272,51 @@ function setupEventListeners() {
         });
     });
     
+    // List Button - NEW
+    const btnList = document.getElementById('btnList');
+    if (btnList) {
+        btnList.addEventListener('click', showReportList);
+    }
+    
+    // Emergency Button - NEW
+    const btnEmergency = document.getElementById('btnEmergency');
+    if (btnEmergency) {
+        btnEmergency.addEventListener('click', showEmergencyModal);
+    }
+    
+    // Close Emergency Modal - NEW
+    const closeEmergency = document.getElementById('closeEmergency');
+    if (closeEmergency) {
+        closeEmergency.addEventListener('click', closeEmergencyModal);
+    }
+    
+    // Login Form - NEW
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    
+    // Close Login Modal - NEW
+    const closeLogin = document.getElementById('closeLogin');
+    if (closeLogin) {
+        closeLogin.addEventListener('click', closeLoginModal);
+    }
+    
+    // Profile/Login Button - NEW
+    const profileBtn = document.getElementById('profileBtn');
+    if (profileBtn) {
+        profileBtn.addEventListener('click', () => {
+            if (isAdmin) {
+                // Show logout or admin panel
+                if (confirm('Logout dari admin?')) {
+                    logout();
+                }
+            } else {
+                openLoginModal();
+            }
+        });
+    }
+    
     console.log('✅ Event listeners setup');
 }
 
@@ -299,6 +350,10 @@ function closeModalLapor() {
     if (modal) {
         modal.classList.remove('show');
         document.body.style.overflow = '';
+        
+        // Reset form
+        const form = document.getElementById('formLapor');
+        if (form) form.reset();
     }
 }
 
@@ -309,8 +364,10 @@ async function handleSubmit(e) {
     const judul = document.getElementById('judulLaporan')?.value;
     const kategori = document.getElementById('kategoriSelect')?.value;
     const deskripsi = document.getElementById('deskripsiDetail')?.value;
+    const pelaporNama = document.getElementById('pelaporNama')?.value;
+    const pelaporKontak = document.getElementById('pelaporKontak')?.value;
     
-    if (!judul || !kategori || !deskripsi) {
+    if (!judul || !kategori || !deskripsi || !pelaporNama || !pelaporKontak) {
         alert('⚠️ Semua field harus diisi!');
         return;
     }
@@ -320,12 +377,212 @@ async function handleSubmit(e) {
         deskripsi: `${judul} - ${deskripsi}`,
         latitude: userLocation.lat,
         longitude: userLocation.lng,
+        pelapor_nama: pelaporNama,
+        pelapor_kontak: pelaporKontak,
         foto_url: null,
         created_at: new Date().toISOString()
     };
     
     await submitReport(reportData);
 }
+
+// NEW: Report List Modal
+async function showReportList() {
+    if (!supabaseClient) return;
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('reports')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        const modal = document.getElementById('modalList');
+        const listContainer = document.getElementById('reportListContainer');
+        
+        if (!modal || !listContainer) return;
+        
+        // Clear previous list
+        listContainer.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            listContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">Belum ada laporan</p>';
+        } else {
+            data.forEach(report => {
+                const reportCard = createReportCard(report);
+                listContainer.appendChild(reportCard);
+            });
+        }
+        
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    } catch (error) {
+        console.error('❌ Error loading report list:', error);
+        alert('Gagal memuat daftar laporan');
+    }
+}
+
+function createReportCard(report) {
+    const div = document.createElement('div');
+    div.className = 'report-card';
+    
+    const color = categoryColors[report.kategori] || '#6B7280';
+    const date = new Date(report.created_at);
+    const dateStr = date.toLocaleString('id-ID', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    div.innerHTML = `
+        <div class="report-card-header" style="background: linear-gradient(135deg, ${color}22, ${color}11);">
+            <div class="report-badge" style="background: ${color};">${report.kategori.toUpperCase()}</div>
+            <div class="report-time">⏰ ${dateStr}</div>
+        </div>
+        <div class="report-card-body">
+            <h3 class="report-title">${report.deskripsi.split(' - ')[0] || 'Laporan'}</h3>
+            <p class="report-desc">${report.deskripsi}</p>
+            <div class="report-meta">
+                <div class="report-meta-item">
+                    <i class="material-icons">person</i>
+                    <span>${report.pelapor_nama || 'Anonim'}</span>
+                </div>
+                <div class="report-meta-item">
+                    <i class="material-icons">location_on</i>
+                    <span>${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    div.addEventListener('click', () => {
+        // Close modal and center map on this report
+        closeListModal();
+        if (map) {
+            map.setView([report.latitude, report.longitude], 16);
+            
+            // Open popup for this report
+            const reportItem = currentReports.get(report.id);
+            if (reportItem && reportItem.marker) {
+                reportItem.marker.openPopup();
+            }
+        }
+    });
+    
+    return div;
+}
+
+function closeListModal() {
+    const modal = document.getElementById('modalList');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+// NEW: Emergency Modal
+function showEmergencyModal() {
+    const modal = document.getElementById('modalEmergency');
+    if (modal) {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeEmergencyModal() {
+    const modal = document.getElementById('modalEmergency');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+// NEW: Login Functions
+function openLoginModal() {
+    const modal = document.getElementById('modalLogin');
+    if (modal) {
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeLoginModal() {
+    const modal = document.getElementById('modalLogin');
+    if (modal) {
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('loginUsername')?.value;
+    const password = document.getElementById('loginPassword')?.value;
+    
+    if (!username || !password) {
+        alert('⚠️ Username dan password harus diisi!');
+        return;
+    }
+    
+    // Simple admin check (you should use proper auth in production)
+    if (username === 'admin' && password === 'admin123') {
+        isAdmin = true;
+        localStorage.setItem('info24jam_admin', 'true');
+        
+        closeLoginModal();
+        alert('✅ Login berhasil! Selamat datang Admin.');
+        
+        // Update UI
+        updateAdminUI();
+    } else {
+        alert('❌ Username atau password salah!');
+    }
+}
+
+function logout() {
+    isAdmin = false;
+    localStorage.removeItem('info24jam_admin');
+    updateAdminUI();
+    alert('✅ Logout berhasil');
+}
+
+function checkAdminStatus() {
+    const adminStatus = localStorage.getItem('info24jam_admin');
+    if (adminStatus === 'true') {
+        isAdmin = true;
+        updateAdminUI();
+    }
+}
+
+function updateAdminUI() {
+    const profileBtn = document.getElementById('profileBtn');
+    if (profileBtn) {
+        if (isAdmin) {
+            profileBtn.style.background = '#10b981';
+            profileBtn.title = 'Admin - Click to logout';
+        } else {
+            profileBtn.style.background = 'transparent';
+            profileBtn.title = 'Login Admin';
+        }
+    }
+}
+
+// Close modals when clicking outside
+document.addEventListener('click', (e) => {
+    const modals = ['modalLapor', 'modalList', 'modalEmergency', 'modalLogin'];
+    modals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal && e.target === modal) {
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    });
+});
 
 // Initialize on DOM ready
 if (document.readyState === 'loading') {

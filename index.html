@@ -68,6 +68,7 @@
             align-items: center;
             justify-content: center;
             border-radius: 8px;
+            transition: all 0.3s;
         }
         
         .menu-btn:hover, .profile-btn:hover {
@@ -172,7 +173,7 @@
             display: none !important;
         }
         
-        /* Bottom Controls */
+        /* Bottom Controls - UPDATED */
         .bottom-controls {
             position: absolute;
             bottom: 24px;
@@ -198,6 +199,12 @@
             justify-content: center;
             gap: 6px;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
         }
         
         .control-btn.emergency {
@@ -205,38 +212,8 @@
             border-color: #ef4444;
         }
         
-        /* Emergency Buttons */
-        .emergency-numbers {
-            position: absolute;
-            bottom: 100px;
-            right: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 500;
-        }
-        
-        .emergency-btn {
+        .control-btn.emergency:hover {
             background: #ef4444;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 24px;
-            color: #fff;
-            font-weight: 700;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-        }
-        
-        .emergency-btn.police {
-            background: #dc2626;
-        }
-        
-        .emergency-btn i {
-            font-size: 16px;
         }
         
         /* FAB */
@@ -257,6 +234,7 @@
             cursor: pointer;
             box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
             z-index: 600;
+            transition: transform 0.2s;
         }
         
         .fab:active {
@@ -314,7 +292,7 @@
             z-index: 500;
         }
         
-        /* Modal Lapor */
+        /* Modal Base */
         .modal {
             display: none;
             position: fixed;
@@ -495,6 +473,11 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            transition: background 0.2s;
+        }
+        
+        .submit-btn:hover {
+            background: #dc2626;
         }
         
         .contributor-status {
@@ -532,6 +515,170 @@
             color: #fff;
         }
         
+        /* Report List Styles - NEW */
+        .report-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .report-card:hover {
+            border-color: #ef4444;
+            transform: translateY(-2px);
+        }
+        
+        .report-card-header {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #333;
+        }
+        
+        .report-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .report-time {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .report-card-body {
+            padding: 16px;
+        }
+        
+        .report-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        
+        .report-desc {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+        
+        .report-meta {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .report-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .report-meta-item i {
+            font-size: 16px;
+        }
+        
+        /* Emergency Modal Styles - NEW */
+        .emergency-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        
+        .emergency-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.2s;
+        }
+        
+        .emergency-item:hover {
+            border-color: #ef4444;
+            background: #222;
+        }
+        
+        .emergency-icon {
+            width: 56px;
+            height: 56px;
+            background: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .emergency-icon i {
+            font-size: 28px;
+            color: #fff;
+        }
+        
+        .emergency-info {
+            flex: 1;
+        }
+        
+        .emergency-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .emergency-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ef4444;
+        }
+        
+        /* Login Modal Styles - NEW */
+        .login-input-group {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        .login-input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 14px 14px 14px 46px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+        }
+        
+        .login-input::placeholder {
+            color: #666;
+        }
+        
+        .login-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        
         .hidden {
             display: none;
         }
@@ -550,7 +697,7 @@
                 <div class="header-title">Info 24 Jam</div>
                 <div class="header-subtitle">EMYDN GROUP</div>
             </div>
-            <button class="profile-btn" id="profileBtn">
+            <button class="profile-btn" id="profileBtn" title="Login Admin">
                 <i class="material-icons">account_circle</i>
             </button>
         </header>
@@ -575,7 +722,7 @@
             </div>
             <div class="filter-chip" data-filter="kebakaran">
                 <i class="material-icons">local_fire_department</i>
-                <span>Macet</span>
+                <span>Kebakaran</span>
             </div>
             <div class="filter-chip" data-filter="kecelakaan">
                 <i class="material-icons">directions_car</i>
@@ -584,6 +731,10 @@
             <div class="filter-chip" data-filter="kriminal">
                 <i class="material-icons">gavel</i>
                 <span>Kriminal</span>
+            </div>
+            <div class="filter-chip" data-filter="macet">
+                <i class="material-icons">traffic</i>
+                <span>Macet</span>
             </div>
         </div>
 
@@ -600,21 +751,9 @@
             <i class="material-icons">my_location</i>
         </button>
 
-        <!-- Emergency Numbers -->
-        <div class="emergency-numbers">
-            <a href="tel:119" class="emergency-btn">
-                <i class="material-icons">local_hospital</i>
-                <span>AMBULANS 119</span>
-            </a>
-            <a href="tel:110" class="emergency-btn police">
-                <i class="material-icons">local_police</i>
-                <span>POLISI 110</span>
-            </a>
-        </div>
-
-        <!-- Bottom Controls -->
-        <div class="bottom-controls hidden">
-            <button class="control-btn emergency">
+        <!-- Bottom Controls - UPDATED -->
+        <div class="bottom-controls">
+            <button class="control-btn emergency" id="btnEmergency">
                 <i class="material-icons">call</i>
                 <span>📞 Darurat</span>
             </button>
@@ -648,19 +787,30 @@
                         <i class="material-icons">location_on</i>
                         <div class="location-text">
                             <div class="location-label">Lokasi Terdeteksi</div>
-                            <div class="location-coords" id="locationText">Jl. Sudirman No. 12, Jakarta Pusat</div>
+                            <div class="location-coords" id="locationText">Mendeteksi lokasi...</div>
                         </div>
                     </div>
                 </div>
 
+                <!-- NEW: Reporter Info -->
                 <div class="form-group">
-                    <label class="form-label">Judul Laporan</label>
-                    <input type="text" class="form-input" placeholder="Contoh: Tiang listrik tumbang" id="judulLaporan">
+                    <label class="form-label">Nama Pelapor *</label>
+                    <input type="text" class="form-input" placeholder="Nama lengkap Anda" id="pelaporNama" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Kategori Kejadian</label>
-                    <select class="form-select" id="kategoriSelect">
+                    <label class="form-label">Kontak Pelapor (HP/WA) *</label>
+                    <input type="tel" class="form-input" placeholder="08xxxxxxxxxx" id="pelaporKontak" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Judul Laporan *</label>
+                    <input type="text" class="form-input" placeholder="Contoh: Tiang listrik tumbang" id="judulLaporan" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Kategori Kejadian *</label>
+                    <select class="form-select" id="kategoriSelect" required>
                         <option value="">Pilih Kategori</option>
                         <option value="banjir">🌊 Banjir</option>
                         <option value="kebakaran">🔥 Kebakaran</option>
@@ -671,8 +821,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Deskripsi Detail</label>
-                    <textarea class="form-textarea" placeholder="Ceritakan kronologi atau detail kejadian secara lengkap agar petugas mudah melakukan tindak lanjut..." id="deskripsiDetail"></textarea>
+                    <label class="form-label">Deskripsi Detail *</label>
+                    <textarea class="form-textarea" placeholder="Ceritakan kronologi atau detail kejadian secara lengkap agar petugas mudah melakukan tindak lanjut..." id="deskripsiDetail" required></textarea>
                 </div>
 
                 <div class="form-group">
@@ -708,6 +858,138 @@
                             Instansi
                         </div>
                     </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal List Report - NEW -->
+    <div class="modal" id="modalList">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="back-btn" onclick="document.getElementById('modalList').classList.remove('show'); document.body.style.overflow = '';">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <div class="modal-title-group">
+                    <div class="modal-title">Daftar Laporan</div>
+                    <div class="modal-subtitle">RECENT REPORTS</div>
+                </div>
+            </div>
+            <div class="modal-body" id="reportListContainer">
+                <!-- Reports will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Emergency - NEW -->
+    <div class="modal" id="modalEmergency">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="back-btn" id="closeEmergency">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <div class="modal-title-group">
+                    <div class="modal-title">Nomor Darurat</div>
+                    <div class="modal-subtitle">EMERGENCY HOTLINE</div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="emergency-grid">
+                    <a href="tel:112" class="emergency-item">
+                        <div class="emergency-icon">
+                            <i class="material-icons">emergency</i>
+                        </div>
+                        <div class="emergency-info">
+                            <div class="emergency-name">Nomor Darurat Nasional</div>
+                            <div class="emergency-number">112</div>
+                        </div>
+                    </a>
+
+                    <a href="tel:110" class="emergency-item">
+                        <div class="emergency-icon">
+                            <i class="material-icons">local_police</i>
+                        </div>
+                        <div class="emergency-info">
+                            <div class="emergency-name">Polisi</div>
+                            <div class="emergency-number">110</div>
+                        </div>
+                    </a>
+
+                    <a href="tel:113" class="emergency-item">
+                        <div class="emergency-icon">
+                            <i class="material-icons">local_fire_department</i>
+                        </div>
+                        <div class="emergency-info">
+                            <div class="emergency-name">Pemadam Kebakaran</div>
+                            <div class="emergency-number">113</div>
+                        </div>
+                    </a>
+
+                    <a href="tel:118" class="emergency-item">
+                        <div class="emergency-icon">
+                            <i class="material-icons">local_hospital</i>
+                        </div>
+                        <div class="emergency-info">
+                            <div class="emergency-name">Ambulans</div>
+                            <div class="emergency-number">118 / 119</div>
+                        </div>
+                    </a>
+
+                    <a href="tel:129" class="emergency-item">
+                        <div class="emergency-icon">
+                            <i class="material-icons">flood</i>
+                        </div>
+                        <div class="emergency-info">
+                            <div class="emergency-name">Basarnas (SAR)</div>
+                            <div class="emergency-number">115</div>
+                        </div>
+                    </a>
+
+                    <a href="tel:123" class="emergency-item">
+                        <div class="emergency-icon">
+                            <i class="material-icons">bolt</i>
+                        </div>
+                        <div class="emergency-info">
+                            <div class="emergency-name">PLN (Listrik)</div>
+                            <div class="emergency-number">123</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Login - NEW -->
+    <div class="modal" id="modalLogin">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="back-btn" id="closeLogin">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <div class="modal-title-group">
+                    <div class="modal-title">Admin Login</div>
+                    <div class="modal-subtitle">SECURE PORTAL</div>
+                </div>
+            </div>
+            <form class="modal-body" id="loginForm">
+                <div class="login-input-group">
+                    <i class="material-icons login-input-icon">person</i>
+                    <input type="text" class="login-input" placeholder="Username" id="loginUsername" required>
+                </div>
+
+                <div class="login-input-group">
+                    <i class="material-icons login-input-icon">lock</i>
+                    <input type="password" class="login-input" placeholder="Password" id="loginPassword" required>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="material-icons">login</i>
+                    <span>Login Admin</span>
+                </button>
+
+                <div class="login-footer">
+                    <p>🔒 Secure Admin Portal</p>
+                    <p style="margin-top: 8px; font-size: 11px;">© 2024 Emydn Group. All rights reserved.</p>
                 </div>
             </form>
         </div>
