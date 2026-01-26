@@ -42,101 +42,8 @@
         }
     </script>
     
-    <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-            box-sizing: border-box;
-        }
-        
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            width: 100%;
-            font-family: 'Public Sans', sans-serif;
-            overflow: hidden;
-        }
-        
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        
-        .material-symbols-outlined.filled {
-            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        
-        #app {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        #map {
-            flex: 1;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .modal-overlay {
-            z-index: 1000;
-            backdrop-filter: blur(8px);
-        }
-        
-        .toast-container {
-            z-index: 2000;
-        }
-        
-        .animate-slideup {
-            animation: slideup 0.3s ease-out;
-        }
-        
-        @keyframes slideup {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .animate-slidein {
-            animation: slidein 0.3s ease-out;
-        }
-        
-        @keyframes slidein {
-            from {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        
-        .ios-blur {
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-        
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-    </style>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="dark:bg-background-dark">
     <!-- Main Container -->
@@ -144,8 +51,8 @@
         <!-- Header -->
         <header class="bg-gradient-to-r from-primary to-red-600 text-white shadow-lg relative z-50">
             <div class="flex items-center justify-between p-4">
-                <button id="btnMenu" class="flex items-center justify-center w-10 h-10">
-                    <span class="material-symbols-outlined text-2xl">menu</span>
+                <button id="btnAdmin" class="flex items-center justify-center w-10 h-10 bg-red-700 hover:bg-red-800 rounded-lg transition">
+                    <span class="material-symbols-outlined text-xl">admin_panel_settings</span>
                 </button>
                 
                 <div class="flex flex-col items-center flex-1">
@@ -153,39 +60,30 @@
                     <p class="text-[10px] uppercase tracking-widest font-bold opacity-90">Emydn Group</p>
                 </div>
                 
-                <button id="btnProfile" class="flex items-center justify-center w-10 h-10">
-                    <span class="material-symbols-outlined text-2xl">account_circle</span>
+                <button id="btnToggleLegend" class="flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 rounded-lg transition">
+                    <span class="material-symbols-outlined text-xl">info</span>
                 </button>
-            </div>
-            
-            <!-- Search Bar -->
-            <div class="px-4 pb-3">
-                <div class="flex items-center bg-black/20 rounded-lg overflow-hidden">
-                    <span class="material-symbols-outlined text-white/70 pl-3">search</span>
-                    <input type="text" placeholder="Cari area atau kejadian..." 
-                           class="flex-1 bg-transparent text-white placeholder-white/60 px-3 py-2 text-sm focus:outline-none">
-                </div>
             </div>
             
             <!-- Category Filters -->
             <div class="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
-                <button class="filter-chip active flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 border border-white/30 whitespace-nowrap text-xs font-semibold" data-category="">
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 border border-white/30 whitespace-nowrap text-xs font-semibold">
                     <span class="material-symbols-outlined text-sm">grid_view</span>
                     Semua
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="banjir">
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
                     <span class="material-symbols-outlined text-sm">waves</span>
                     Banjir
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="kebakaran">
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
                     <span class="material-symbols-outlined text-sm">local_fire_department</span>
                     Kebakaran
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="kecelakaan">
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
                     <span class="material-symbols-outlined text-sm">directions_car</span>
                     Kecelakaan
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium" data-category="kriminal">
+                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
                     <span class="material-symbols-outlined text-sm">gavel</span>
                     Kriminal
                 </button>
@@ -195,28 +93,47 @@
         <!-- Map Container -->
         <div id="map" class="relative"></div>
         
-        <!-- Map Controls Overlay -->
-        <div class="absolute right-4 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-3 pointer-events-none">
-            <div class="pointer-events-auto flex flex-col bg-card-dark/90 rounded-lg overflow-hidden shadow-xl border border-white/5">
-                <button id="btnZoomIn" class="flex items-center justify-center w-10 h-10 hover:bg-white/10 active:bg-primary/20 transition">
-                    <span class="material-symbols-outlined text-white">add</span>
-                </button>
-                <div class="h-px bg-white/10"></div>
-                <button id="btnZoomOut" class="flex items-center justify-center w-10 h-10 hover:bg-white/10 active:bg-primary/20 transition">
-                    <span class="material-symbols-outlined text-white">remove</span>
+        <!-- Legend Box -->
+        <div id="legendBox" class="hidden absolute top-20 right-4 bg-card-dark/95 backdrop-blur-lg rounded-xl shadow-2xl p-4 z-20 border border-white/10 max-w-xs">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-white font-bold text-sm">📍 Legenda</h3>
+                <button id="btnCloseLegend" class="text-white/60 hover:text-white">
+                    <span class="material-symbols-outlined text-sm">close</span>
                 </button>
             </div>
-            
-            <button id="btnMyLocation" class="pointer-events-auto flex items-center justify-center w-12 h-12 bg-card-dark/90 rounded-lg shadow-xl border border-white/5 hover:bg-white/10 active:bg-primary/20 transition">
-                <span class="material-symbols-outlined filled text-primary text-xl">near_me</span>
-            </button>
+            <div class="space-y-2 text-xs">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span class="text-white/80">🌊 Banjir</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span class="text-white/80">🔥 Kebakaran</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <span class="text-white/80">🚗 Kecelakaan</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span class="text-white/80">⚠️ Kriminal</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span class="text-white/80">🚦 Kemacetan</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-gray-500"></div>
+                    <span class="text-white/80">❓ Lainnya</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Bottom Sheet Toggle -->
-        <div class="absolute bottom-24 left-4 right-4 z-10 flex gap-2">
-            <button id="btnToggleList" class="flex-1 bg-card-dark/90 ios-blur text-white rounded-lg px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2">
+        <!-- Bottom Action Bar -->
+        <div class="absolute bottom-6 left-4 right-4 z-10 flex gap-2">
+            <button id="btnToggleView" class="flex-1 bg-card-dark/90 backdrop-blur-lg text-white rounded-xl px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2 hover:bg-card-dark transition">
                 <span class="material-symbols-outlined text-lg">list</span>
-                Lihat Daftar Laporan
+                📋 List
             </button>
         </div>
 
@@ -224,74 +141,54 @@
         <button id="btnLapor" class="fixed bottom-6 right-6 w-16 h-16 bg-primary hover:bg-primary-dark rounded-full shadow-2xl flex items-center justify-center z-20 transition transform active:scale-95 ring-4 ring-primary/20">
             <span class="material-symbols-outlined filled text-white text-3xl">campaign</span>
         </button>
-
-        <!-- Emergency Call Button -->
-        <div class="fixed bottom-6 left-6 z-20 flex flex-col gap-2" id="emergencyButtons">
-            <button class="hidden emergency-extended bg-red-800/90 text-white rounded-full px-4 py-2 text-xs font-bold shadow-lg flex items-center gap-2 border border-white/20">
-                <span>POLISI 110</span>
-                <span class="material-symbols-outlined text-sm">local_police</span>
-            </button>
-            <button class="hidden emergency-extended bg-red-700/90 text-white rounded-full px-4 py-2 text-xs font-bold shadow-lg flex items-center gap-2 border border-white/20">
-                <span>AMBULANS 119</span>
-                <span class="material-symbols-outlined text-sm">medical_services</span>
-            </button>
-            <button id="btnEmergency" class="w-12 h-12 bg-red-700 rounded-full shadow-xl flex items-center justify-center ring-4 ring-red-700/20">
-                <span class="material-symbols-outlined filled text-white text-xl">call</span>
-            </button>
-        </div>
     </div>
 
     <!-- Toast Container -->
-    <div id="toastContainer" class="toast-container fixed top-20 right-4 space-y-2 z-50"></div>
+    <div id="toastContainer" class="toast-container fixed top-20 right-4 space-y-2 z-[9999]"></div>
 
     <!-- Modal: List View -->
-    <div id="modalList" class="modal-overlay fixed inset-0 bg-black/60 hidden">
-        <div class="h-full flex flex-col bg-background-dark animate-slideup">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-primary to-red-600 text-white p-4 flex items-center justify-between">
-                <h2 class="text-xl font-bold">Daftar Laporan</h2>
-                <button id="btnCloseList" class="flex items-center justify-center w-10 h-10">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-            
-            <!-- Filter -->
-            <div class="p-4 bg-card-dark border-b border-white/5">
-                <select id="filterKategori" class="w-full px-4 py-2.5 bg-background-dark text-white rounded-lg border border-white/10 focus:border-primary focus:outline-none">
-                    <option value="">🔍 Semua Kategori</option>
-                    <option value="banjir">🌊 Banjir</option>
-                    <option value="kebakaran">🔥 Kebakaran</option>
-                    <option value="kecelakaan">🚗 Kecelakaan</option>
-                    <option value="kriminal">⚠️ Kriminal</option>
-                    <option value="macet">🚦 Kemacetan</option>
-                    <option value="lainnya">❓ Lainnya</option>
-                </select>
-            </div>
-            
-            <!-- Reports List -->
-            <div id="reportsList" class="flex-1 overflow-y-auto p-4 space-y-3">
-                <!-- Will be filled by JavaScript -->
+    <div id="listPanel" class="hidden fixed inset-0 bg-background-dark z-40 flex flex-col">
+        <div class="bg-gradient-to-r from-primary to-red-600 text-white p-4 flex items-center justify-between">
+            <h2 class="text-xl font-bold">📋 Daftar Laporan</h2>
+            <button id="btnCloseList" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <div class="p-4 bg-card-dark border-b border-white/5">
+            <select id="filterKategori" class="w-full px-4 py-2.5 bg-background-dark text-white rounded-lg border border-white/10 focus:border-primary focus:outline-none">
+                <option value="">🔍 Semua Kategori</option>
+                <option value="banjir">🌊 Banjir</option>
+                <option value="kebakaran">🔥 Kebakaran</option>
+                <option value="kecelakaan">🚗 Kecelakaan</option>
+                <option value="kriminal">⚠️ Kriminal</option>
+                <option value="macet">🚦 Kemacetan</option>
+                <option value="lainnya">❓ Lainnya</option>
+            </select>
+        </div>
+        
+        <div id="reportsList" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+            <div class="text-center py-12 text-gray-500">
+                <div class="text-6xl mb-4">📭</div>
+                <p class="text-lg font-semibold">Memuat laporan...</p>
             </div>
         </div>
     </div>
 
     <!-- Modal: Form Lapor -->
-    <div id="modalLapor" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0">
+    <div id="modalLapor" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0 z-50">
         <div class="w-full max-h-[90vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
-            <!-- Header -->
             <div class="bg-gradient-to-r from-primary to-red-600 text-white p-6 flex items-center justify-between sticky top-0 z-10">
                 <div class="flex-1">
-                    <h2 class="text-xl font-bold">Lapor Darurat</h2>
+                    <h2 class="text-xl font-bold">📢 Lapor Darurat</h2>
                     <p class="text-sm opacity-90 mt-1">Lokasi otomatis dari GPS Anda</p>
                 </div>
-                <button id="btnCloseLapor" class="flex items-center justify-center w-10 h-10">
+                <button id="btnBatal" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
 
-            <!-- Form -->
-            <form id="formLapor" class="p-6 space-y-5 overflow-y-auto" style="max-height: calc(90vh - 100px);">
-                <!-- Kategori -->
+            <form id="formLapor" class="p-6 space-y-5 overflow-y-auto scrollbar-hide" style="max-height: calc(90vh - 100px);">
                 <div>
                     <label class="block text-sm font-semibold text-white mb-2">Kategori Darurat *</label>
                     <select id="kategori" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-primary focus:outline-none" required>
@@ -305,22 +202,19 @@
                     </select>
                 </div>
 
-                <!-- Deskripsi -->
                 <div>
                     <label class="block text-sm font-semibold text-white mb-2">Deskripsi Detail *</label>
                     <textarea id="deskripsi" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-primary focus:outline-none h-28 resize-none" placeholder="Jelaskan situasi darurat dengan detail..." required></textarea>
                 </div>
 
-                <!-- Lokasi Display -->
                 <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
                     <div class="flex items-center gap-2 mb-1">
                         <span class="material-symbols-outlined text-emerald-500 text-sm">location_on</span>
                         <p class="text-xs font-semibold text-emerald-500 uppercase tracking-wide">Lokasi Anda</p>
                     </div>
-                    <p id="lokasi" class="text-sm text-white font-mono">Mengambil koordinat...</p>
+                    <p id="lokasi" class="text-sm text-white font-mono">Mengambil koordinat GPS...</p>
                 </div>
 
-                <!-- Photo Upload -->
                 <div>
                     <label class="block text-sm font-semibold text-white mb-2">📸 Unggah Foto (Opsional)</label>
                     <div id="uploadArea" class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition bg-card-dark">
@@ -334,28 +228,21 @@
                             </div>
                         </div>
                         <input type="file" id="fileInput" class="hidden" accept="image/*">
-                        <p id="fileName" class="text-xs text-emerald-500 mt-3"></p>
+                        <p id="fileName" class="text-xs text-white/60 mt-3"></p>
                     </div>
                     
-                    <!-- Image Preview -->
                     <div id="imagePreview" class="hidden mt-3 relative">
                         <img id="previewImg" src="" alt="Preview" class="w-full h-48 object-cover rounded-xl">
-                        <button type="button" id="btnRemoveImage" class="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                        <button type="button" id="btnRemoveImage" class="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition">
                             <span class="material-symbols-outlined text-white text-sm">close</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Submit Buttons -->
                 <div class="flex gap-3 pt-4 sticky bottom-0 bg-background-dark pb-4">
-                    <button type="button" id="btnBatal" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
-                        Batal
-                    </button>
-                    <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                    <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
                         <span>Kirim Laporan</span>
-                        <span id="submitSpinner" class="hidden">
-                            <span class="material-symbols-outlined animate-spin">progress_activity</span>
-                        </span>
+                        <span id="submitSpinner" class="hidden material-symbols-outlined animate-spin">progress_activity</span>
                     </button>
                 </div>
             </form>
@@ -363,27 +250,26 @@
     </div>
 
     <!-- Modal: Report Detail -->
-    <div id="modalInfo" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0">
+    <div id="modalInfo" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0 z-50">
         <div class="w-full max-h-[85vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
-            <!-- Content -->
-            <div id="infoContent" class="p-6 overflow-y-auto" style="max-height: calc(85vh - 80px);">
-                <!-- Will be filled by JavaScript -->
+            <div id="infoContent" class="p-6 overflow-y-auto scrollbar-hide" style="max-height: calc(85vh - 80px);">
+                <!-- Filled by JavaScript -->
             </div>
             
-            <!-- Actions -->
             <div class="bg-card-dark p-4 flex gap-3 border-t border-white/10">
                 <button id="btnCloseInfo" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
                     Tutup
                 </button>
-                <button id="btnDeleteReport" class="hidden flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition">
-                    🗑️ Hapus
+                <button id="btnDeleteReport" class="hidden flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined">delete</span>
+                    Hapus
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Modal: Admin Login -->
-    <div id="modalAdmin" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4">
+    <div id="modalAdmin" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50">
         <div class="w-full max-w-sm bg-background-dark rounded-2xl overflow-hidden animate-slideup">
             <div class="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-6">
                 <div class="flex items-center justify-between">
@@ -391,7 +277,7 @@
                         <h2 class="text-xl font-bold">🔐 Admin Login</h2>
                         <p class="text-sm opacity-80 mt-1">Portal manajemen</p>
                     </div>
-                    <button id="btnCloseAdmin" class="flex items-center justify-center w-10 h-10">
+                    <button id="btnCancelAdmin" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
@@ -409,10 +295,7 @@
                 </div>
                 
                 <div class="flex gap-3 pt-2">
-                    <button type="button" id="btnCancelAdmin" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
-                        Batal
-                    </button>
-                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition">
                         Masuk
                     </button>
                 </div>
@@ -443,31 +326,11 @@
     </div>
 
     <!-- Loading Bar -->
-    <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-red-500 opacity-0 transition-opacity z-50"></div>
+    <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-red-500 opacity-0 transition-opacity z-[9999]"></div>
 
-    <!-- Scripts -->
+    <!-- External Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script>
-        // Use the same app.js code you provided
-        // Just copy-paste your entire app.js content here, or load it externally
-        
-        // For demo purposes, I'll include key initialization
-        console.log('📱 Info 24 Jam PWA Loaded');
-        
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Initializing app...');
-            
-            // Add your initApp() function call here
-            if (typeof initApp === 'function') {
-                initApp();
-            }
-        });
-    </script>
-    
-    <!-- Load your app.js -->
     <script src="app.js"></script>
 </body>
 </html>
