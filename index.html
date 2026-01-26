@@ -1,412 +1,719 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Info 24 Jam - Platform pelaporan darurat real-time">
-    <meta name="theme-color" content="#d41111">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
     
-    <title>Info 24 Jam - Lapor Darurat</title>
+    <title>Info 24 Jam</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#d41111",
-                        "primary-dark": "#a00e0e",
-                        "background-dark": "#0a0a0c",
-                        "card-dark": "#181111",
-                    },
-                    fontFamily: {
-                        "display": ["Public Sans", "sans-serif"]
-                    }
-                }
-            }
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
-    </script>
-    
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/styles.css">
+        
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        header {
+            background: #000;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #222;
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .menu-btn, .profile-btn {
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+        
+        .menu-btn:hover, .profile-btn:hover {
+            background: #1a1a1a;
+        }
+        
+        .header-center {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .header-subtitle {
+            font-size: 10px;
+            color: #ef4444;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        
+        /* Search Bar */
+        .search-container {
+            padding: 12px 16px;
+            background: #000;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 14px 14px 14px 46px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+        }
+        
+        .search-input::placeholder {
+            color: #666;
+        }
+        
+        /* Filter Chips */
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 12px;
+            overflow-x: auto;
+            background: #000;
+        }
+        
+        .filter-chips::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .filter-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 24px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-chip.active {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        .filter-chip i {
+            font-size: 18px;
+        }
+        
+        /* Map */
+        #map {
+            flex: 1;
+            background: #0a0a0a;
+        }
+        
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+        
+        /* Bottom Controls */
+        .bottom-controls {
+            position: absolute;
+            bottom: 24px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            gap: 12px;
+            z-index: 500;
+        }
+        
+        .control-btn {
+            flex: 1;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        
+        .control-btn.emergency {
+            background: rgba(239, 68, 68, 0.9);
+            border-color: #ef4444;
+        }
+        
+        /* Emergency Buttons */
+        .emergency-numbers {
+            position: absolute;
+            bottom: 100px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 500;
+        }
+        
+        .emergency-btn {
+            background: #ef4444;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 24px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        
+        .emergency-btn.police {
+            background: #dc2626;
+        }
+        
+        .emergency-btn i {
+            font-size: 16px;
+        }
+        
+        /* FAB */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 16px;
+            width: 64px;
+            height: 64px;
+            background: #ef4444;
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.5);
+            z-index: 600;
+        }
+        
+        .fab:active {
+            transform: scale(0.9);
+        }
+        
+        /* Map Controls */
+        .map-controls {
+            position: absolute;
+            bottom: 180px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            z-index: 500;
+        }
+        
+        .map-control-btn {
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid #333;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .map-control-btn:first-child {
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .map-control-btn:last-child {
+            border-radius: 0 0 12px 12px;
+        }
+        
+        .location-btn {
+            position: absolute;
+            bottom: 244px;
+            right: 16px;
+            width: 48px;
+            height: 48px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+        }
+        
+        /* Modal Lapor */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #0a0a0a;
+            width: 100%;
+            max-height: 90vh;
+            border-radius: 24px 24px 0 0;
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            background: #000;
+            padding: 20px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .back-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .modal-title-group {
+            flex: 1;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        .modal-subtitle {
+            font-size: 11px;
+            color: #ef4444;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: calc(90vh - 80px);
+            overflow-y: auto;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #aaa;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 14px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+        }
+        
+        .form-textarea {
+            min-height: 120px;
+            resize: none;
+        }
+        
+        .location-detected {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .location-detected i {
+            color: #10b981;
+            font-size: 20px;
+        }
+        
+        .location-text {
+            flex: 1;
+        }
+        
+        .location-label {
+            font-size: 11px;
+            color: #10b981;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .location-coords {
+            font-size: 14px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .upload-area {
+            border: 2px dashed #333;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #1a1a1a;
+        }
+        
+        .upload-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        
+        .upload-icon i {
+            font-size: 32px;
+            color: #ef4444;
+        }
+        
+        .upload-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .upload-subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            background: #ef4444;
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .contributor-status {
+            margin-top: 24px;
+            text-align: center;
+        }
+        
+        .status-title {
+            font-size: 11px;
+            color: #666;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+        
+        .status-options {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .status-option {
+            padding: 10px 20px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 24px;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .status-option.active {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #fff;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
-<body class="dark:bg-background-dark">
-    <!-- Main Container -->
+<body>
     <div id="app">
         <!-- Header -->
-        <header class="bg-gradient-to-r from-primary to-red-600 text-white shadow-lg relative z-50">
-            <div class="flex items-center justify-between p-4">
-                <button id="btnAdmin" class="flex items-center justify-center w-10 h-10 bg-red-700 hover:bg-red-800 rounded-lg transition">
-                    <span class="material-symbols-outlined text-xl">admin_panel_settings</span>
-                </button>
-                
-                <div class="flex flex-col items-center flex-1">
-                    <h1 class="text-lg font-bold tracking-tight">Info 24 Jam</h1>
-                    <p class="text-[10px] uppercase tracking-widest font-bold opacity-90">Emydn Group</p>
-                </div>
-                
-                <button id="btnToggleLegend" class="flex items-center justify-center w-10 h-10 bg-white/20 hover:bg-white/30 rounded-lg transition">
-                    <span class="material-symbols-outlined text-xl">info</span>
+        <header>
+            <div class="header-left">
+                <button class="menu-btn" id="menuBtn">
+                    <i class="material-icons">menu</i>
                 </button>
             </div>
-            
-            <!-- Search Bar -->
-            <div class="px-4 pb-3">
-                <div class="relative">
-                    <input 
-                        type="text" 
-                        id="searchInput" 
-                        placeholder="Cari lokasi, kategori..." 
-                        class="w-full px-4 py-2.5 pl-10 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:bg-white/30 focus:outline-none"
-                    >
-                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-white/70">search</span>
-                </div>
+            <div class="header-center">
+                <div class="header-title">Info 24 Jam</div>
+                <div class="header-subtitle">EMYDN GROUP</div>
             </div>
-            
-            <!-- Category Filters -->
-            <div class="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
-                <button class="filter-chip active" data-kategori="">
-                    <span class="material-symbols-outlined text-sm">grid_view</span>
-                    Semua
-                </button>
-                <button class="filter-chip" data-kategori="banjir">
-                    <span class="material-symbols-outlined text-sm">waves</span>
-                    Banjir
-                </button>
-                <button class="filter-chip" data-kategori="kebakaran">
-                    <span class="material-symbols-outlined text-sm">local_fire_department</span>
-                    Kebakaran
-                </button>
-                <button class="filter-chip" data-kategori="kecelakaan">
-                    <span class="material-symbols-outlined text-sm">directions_car</span>
-                    Kecelakaan
-                </button>
-                <button class="filter-chip" data-kategori="kriminal">
-                    <span class="material-symbols-outlined text-sm">gavel</span>
-                    Kriminal
-                </button>
-            </div>
+            <button class="profile-btn" id="profileBtn">
+                <i class="material-icons">account_circle</i>
+            </button>
         </header>
 
-        <!-- Map Container -->
-        <div id="map" class="relative"></div>
+        <!-- Search -->
+        <div class="search-container">
+            <div class="search-box">
+                <i class="material-icons search-icon">search</i>
+                <input type="text" class="search-input" placeholder="Cari area atau kejadian..." id="searchInput">
+            </div>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="filter-chips">
+            <div class="filter-chip active" data-filter="">
+                <i class="material-icons">apps</i>
+                <span>Semua</span>
+            </div>
+            <div class="filter-chip" data-filter="banjir">
+                <i class="material-icons">water</i>
+                <span>Banjir</span>
+            </div>
+            <div class="filter-chip" data-filter="kebakaran">
+                <i class="material-icons">local_fire_department</i>
+                <span>Macet</span>
+            </div>
+            <div class="filter-chip" data-filter="kecelakaan">
+                <i class="material-icons">directions_car</i>
+                <span>Kecelakaan</span>
+            </div>
+            <div class="filter-chip" data-filter="kriminal">
+                <i class="material-icons">gavel</i>
+                <span>Kriminal</span>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div id="map"></div>
+
+        <!-- Map Controls -->
+        <div class="map-controls">
+            <button class="map-control-btn" id="zoomIn">+</button>
+            <button class="map-control-btn" id="zoomOut">−</button>
+        </div>
         
-        <!-- Legend Box -->
-        <div id="legendBox" class="hidden absolute top-20 right-4 bg-card-dark/95 backdrop-blur-lg rounded-xl shadow-2xl p-4 z-20 border border-white/10 max-w-xs">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-white font-bold text-sm">📍 Legenda</h3>
-                <button id="btnCloseLegend" class="text-white/60 hover:text-white">
-                    <span class="material-symbols-outlined text-sm">close</span>
-                </button>
-            </div>
-            <div class="space-y-2 text-xs">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span class="text-white/80">🌊 Banjir</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span class="text-white/80">🔥 Kebakaran</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <span class="text-white/80">🚗 Kecelakaan</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-purple-500"></div>
-                    <span class="text-white/80">⚠️ Kriminal</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-orange-500"></div>
-                    <span class="text-white/80">🚦 Kemacetan</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-gray-500"></div>
-                    <span class="text-white/80">❓ Lainnya</span>
-                </div>
-            </div>
+        <button class="location-btn" id="centerLocation">
+            <i class="material-icons">my_location</i>
+        </button>
+
+        <!-- Emergency Numbers -->
+        <div class="emergency-numbers">
+            <a href="tel:119" class="emergency-btn">
+                <i class="material-icons">local_hospital</i>
+                <span>AMBULANS 119</span>
+            </a>
+            <a href="tel:110" class="emergency-btn police">
+                <i class="material-icons">local_police</i>
+                <span>POLISI 110</span>
+            </a>
         </div>
 
-        <!-- Bottom Action Bar -->
-        <div class="absolute bottom-6 left-4 right-20 z-10 flex gap-2">
-            <button id="btnEmergency" class="flex-1 bg-red-600/90 backdrop-blur-lg text-white rounded-xl px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2 hover:bg-red-700 transition">
-                <span class="material-symbols-outlined text-lg">call</span>
-                📞 Darurat
+        <!-- Bottom Controls -->
+        <div class="bottom-controls hidden">
+            <button class="control-btn emergency">
+                <i class="material-icons">call</i>
+                <span>📞 Darurat</span>
             </button>
-            <button id="btnToggleView" class="flex-1 bg-card-dark/90 backdrop-blur-lg text-white rounded-xl px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2 hover:bg-card-dark transition">
-                <span class="material-symbols-outlined text-lg">list</span>
-                📋 List
+            <button class="control-btn" id="btnList">
+                <i class="material-icons">list</i>
+                <span>📋 List</span>
             </button>
         </div>
 
-        <!-- Floating Action Button -->
-        <button id="btnLapor" class="fixed bottom-6 right-6 w-16 h-16 bg-primary hover:bg-primary-dark rounded-full shadow-2xl flex items-center justify-center z-20 transition transform active:scale-95 ring-4 ring-primary/20">
-            <span class="material-symbols-outlined filled text-white text-3xl">campaign</span>
+        <!-- FAB -->
+        <button class="fab" id="btnLapor">
+            <i class="material-icons">campaign</i>
         </button>
     </div>
 
-    <!-- Toast Container -->
-    <div id="toastContainer" class="toast-container fixed top-20 right-4 space-y-2 z-[9999]"></div>
-
-    <!-- Modal: Emergency Numbers -->
-    <div id="modalEmergency" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0 z-50">
-        <div class="w-full max-h-[70vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
-            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 flex items-center justify-between">
-                <div>
-                    <h2 class="text-xl font-bold">📞 Nomor Darurat</h2>
-                    <p class="text-sm opacity-90 mt-1">Hubungi layanan darurat</p>
-                </div>
-                <button id="btnCloseEmergency" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
-                    <span class="material-symbols-outlined">close</span>
+    <!-- Modal Lapor -->
+    <div class="modal" id="modalLapor">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="back-btn" id="closeModal">
+                    <i class="material-icons">arrow_back</i>
                 </button>
-            </div>
-            
-            <div class="p-6 space-y-3">
-                <a href="tel:112" class="block bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl transition">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-3xl">emergency</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg">112</div>
-                            <div class="text-sm opacity-90">Layanan Darurat Nasional</div>
-                        </div>
-                        <span class="material-symbols-outlined">call</span>
-                    </div>
-                </a>
-                
-                <a href="tel:110" class="block bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl transition">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-3xl">local_police</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg">110</div>
-                            <div class="text-sm opacity-90">Polisi</div>
-                        </div>
-                        <span class="material-symbols-outlined">call</span>
-                    </div>
-                </a>
-                
-                <a href="tel:113" class="block bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-xl transition">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-3xl">local_fire_department</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg">113</div>
-                            <div class="text-sm opacity-90">Pemadam Kebakaran</div>
-                        </div>
-                        <span class="material-symbols-outlined">call</span>
-                    </div>
-                </a>
-                
-                <a href="tel:118" class="block bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl transition">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-3xl">ambulance</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg">118/119</div>
-                            <div class="text-sm opacity-90">Ambulans</div>
-                        </div>
-                        <span class="material-symbols-outlined">call</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: List View -->
-    <div id="listPanel" class="hidden fixed inset-0 bg-background-dark z-40 flex flex-col">
-        <div class="bg-gradient-to-r from-primary to-red-600 text-white p-4 flex items-center justify-between">
-            <h2 class="text-xl font-bold">📋 Daftar Laporan</h2>
-            <button id="btnCloseList" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        
-        <div class="p-4 bg-card-dark border-b border-white/5">
-            <select id="filterKategori" class="w-full px-4 py-2.5 bg-background-dark text-white rounded-lg border border-white/10 focus:border-primary focus:outline-none">
-                <option value="">🔍 Semua Kategori</option>
-                <option value="banjir">🌊 Banjir</option>
-                <option value="kebakaran">🔥 Kebakaran</option>
-                <option value="kecelakaan">🚗 Kecelakaan</option>
-                <option value="kriminal">⚠️ Kriminal</option>
-                <option value="macet">🚦 Kemacetan</option>
-                <option value="lainnya">❓ Lainnya</option>
-            </select>
-        </div>
-        
-        <div id="reportsList" class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-            <div class="text-center py-12 text-gray-500">
-                <div class="text-6xl mb-4">📭</div>
-                <p class="text-lg font-semibold">Memuat laporan...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Form Lapor -->
-    <div id="modalLapor" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0 z-50">
-        <div class="w-full max-h-[90vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
-            <div class="bg-gradient-to-r from-primary to-red-600 text-white p-6 flex items-center justify-between sticky top-0 z-10">
-                <div class="flex-1">
-                    <h2 class="text-xl font-bold">📢 Lapor Darurat</h2>
-                    <p class="text-sm opacity-90 mt-1">Lokasi otomatis dari GPS Anda</p>
+                <div class="modal-title-group">
+                    <div class="modal-title">Lapor Warga</div>
+                    <div class="modal-subtitle">INFO 24 JAM</div>
                 </div>
-                <button id="btnBatal" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
             </div>
+            <form class="modal-body" id="formLapor">
+                <div class="form-group">
+                    <div class="location-detected">
+                        <i class="material-icons">location_on</i>
+                        <div class="location-text">
+                            <div class="location-label">Lokasi Terdeteksi</div>
+                            <div class="location-coords" id="locationText">Jl. Sudirman No. 12, Jakarta Pusat</div>
+                        </div>
+                    </div>
+                </div>
 
-            <form id="formLapor" class="p-6 space-y-5 overflow-y-auto scrollbar-hide" style="max-height: calc(90vh - 100px);">
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2">Kategori Darurat *</label>
-                    <select id="kategori" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-primary focus:outline-none" required>
-                        <option value="">-- Pilih Kategori --</option>
+                <div class="form-group">
+                    <label class="form-label">Judul Laporan</label>
+                    <input type="text" class="form-input" placeholder="Contoh: Tiang listrik tumbang" id="judulLaporan">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Kategori Kejadian</label>
+                    <select class="form-select" id="kategoriSelect">
+                        <option value="">Pilih Kategori</option>
                         <option value="banjir">🌊 Banjir</option>
                         <option value="kebakaran">🔥 Kebakaran</option>
                         <option value="kecelakaan">🚗 Kecelakaan</option>
                         <option value="kriminal">⚠️ Kriminal</option>
                         <option value="macet">🚦 Kemacetan</option>
-                        <option value="lainnya">❓ Lainnya</option>
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2">Deskripsi Detail *</label>
-                    <textarea id="deskripsi" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-primary focus:outline-none h-28 resize-none" placeholder="Jelaskan situasi darurat dengan detail..." required></textarea>
+                <div class="form-group">
+                    <label class="form-label">Deskripsi Detail</label>
+                    <textarea class="form-textarea" placeholder="Ceritakan kronologi atau detail kejadian secara lengkap agar petugas mudah melakukan tindak lanjut..." id="deskripsiDetail"></textarea>
                 </div>
 
-                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="material-symbols-outlined text-emerald-500 text-sm">location_on</span>
-                        <p class="text-xs font-semibold text-emerald-500 uppercase tracking-wide">Lokasi Anda</p>
-                    </div>
-                    <p id="lokasi" class="text-sm text-white font-mono">Mengambil koordinat GPS...</p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2">📸 Unggah Foto (Opsional)</label>
-                    <div id="uploadArea" class="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition bg-card-dark">
-                        <div class="flex flex-col items-center gap-3">
-                            <div class="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
-                                <span class="material-symbols-outlined text-primary text-3xl">add_a_photo</span>
-                            </div>
-                            <div>
-                                <p class="text-white font-semibold">Klik untuk upload</p>
-                                <p class="text-white/60 text-xs mt-1">atau drag foto di sini</p>
-                            </div>
+                <div class="form-group">
+                    <label class="form-label">Lampiran Foto / Video</label>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i class="material-icons">add_a_photo</i>
                         </div>
+                        <div class="upload-title">Unggah Bukti</div>
+                        <div class="upload-subtitle">Klik untuk ambil foto atau pilih dari galeri</div>
                         <input type="file" id="fileInput" class="hidden" accept="image/*">
-                        <p id="fileName" class="text-xs text-white/60 mt-3"></p>
-                    </div>
-                    
-                    <div id="imagePreview" class="hidden mt-3 relative">
-                        <img id="previewImg" src="" alt="Preview" class="w-full h-48 object-cover rounded-xl">
-                        <button type="button" id="btnRemoveImage" class="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition">
-                            <span class="material-symbols-outlined text-white text-sm">close</span>
-                        </button>
                     </div>
                 </div>
 
-                <div class="flex gap-3 pt-4 sticky bottom-0 bg-background-dark pb-4">
-                    <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                        <span>Kirim Laporan</span>
-                        <span id="submitSpinner" class="hidden material-symbols-outlined animate-spin">progress_activity</span>
-                    </button>
+                <button type="submit" class="submit-btn">
+                    <i class="material-icons">send</i>
+                    <span>Kirim Laporan</span>
+                </button>
+
+                <div class="contributor-status">
+                    <div class="status-title">STATUS KONTRIBUTOR</div>
+                    <div class="status-options">
+                        <div class="status-option">
+                            <i class="material-icons" style="vertical-align: middle; font-size: 16px;">person</i>
+                            User Biasa
+                        </div>
+                        <div class="status-option active">
+                            <i class="material-icons" style="vertical-align: middle; font-size: 16px;">verified</i>
+                            Relawan
+                        </div>
+                        <div class="status-option">
+                            <i class="material-icons" style="vertical-align: middle; font-size: 16px;">business</i>
+                            Instansi
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Report Detail -->
-    <div id="modalInfo" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0 z-50">
-        <div class="w-full max-h-[85vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
-            <div id="infoContent" class="p-6 overflow-y-auto scrollbar-hide" style="max-height: calc(85vh - 80px);">
-                <!-- Filled by JavaScript -->
-            </div>
-            
-            <div class="bg-card-dark p-4 flex gap-3 border-t border-white/10">
-                <button id="btnCloseInfo" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-3 rounded-xl transition">
-                    Tutup
-                </button>
-                <button id="btnDeleteReport" class="hidden flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined">delete</span>
-                    Hapus
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: Admin Login -->
-    <div id="modalAdmin" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50">
-        <div class="w-full max-w-sm bg-background-dark rounded-2xl overflow-hidden animate-slideup">
-            <div class="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-xl font-bold">🔐 Admin Login</h2>
-                        <p class="text-sm opacity-80 mt-1">Portal manajemen</p>
-                    </div>
-                    <button id="btnCancelAdmin" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
-                        <span class="material-symbols-outlined">close</span>
-                    </button>
-                </div>
-            </div>
-            
-            <form id="formAdminLogin" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2">Email</label>
-                    <input type="email" id="adminEmail" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none" required placeholder="admin@info24jam.com">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-semibold text-white mb-2">Password</label>
-                    <input type="password" id="adminPassword" class="w-full px-4 py-3 bg-card-dark text-white rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none" required placeholder="••••••••">
-                </div>
-                
-                <div class="flex gap-3 pt-2">
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition">
-                        Masuk
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- PWA Install Prompt -->
-    <div id="installPrompt" class="fixed bottom-28 left-4 right-4 bg-blue-600 text-white rounded-xl shadow-2xl p-4 hidden z-50 animate-slideup">
-        <div class="flex items-start gap-3 mb-3">
-            <span class="text-3xl">📱</span>
-            <div class="flex-1">
-                <h3 class="font-bold">Install Info 24 Jam</h3>
-                <p class="text-sm opacity-90">Akses lebih cepat dari layar utama</p>
-            </div>
-            <button id="btnCloseInstall" class="text-white/80 hover:text-white">
-                <span class="material-symbols-outlined">close</span>
-            </button>
-        </div>
-        <div class="flex gap-2">
-            <button id="btnInstallApp" class="flex-1 bg-white text-blue-600 font-semibold py-2 rounded-lg hover:bg-blue-50 transition">
-                Install
-            </button>
-            <button id="btnInstallLater" class="flex-1 bg-blue-700 text-white font-semibold py-2 rounded-lg hover:bg-blue-800 transition">
-                Nanti
-            </button>
-        </div>
-    </div>
-
-    <!-- Loading Bar -->
-    <div id="loadingBar" class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-red-500 opacity-0 transition-opacity z-[9999]"></div>
-
-    <!-- External Scripts -->
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
