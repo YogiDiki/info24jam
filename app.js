@@ -1,4 +1,4 @@
-/* Info 24 Jam - Optimized App.js v4.0 */
+/* Info 24 Jam - Optimized App.js v4.1 FINAL */
 
 const CONFIG = {
     SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',
@@ -429,7 +429,6 @@ async function showStatistics() {
     try {
         const { data } = await supabaseClient.from('reports').select('*');
         
-        const stats = {};
         const categories = ['banjir', 'kebakaran', 'kecelakaan', 'kriminal', 'macet', 'lainnya'];
         
         // Calculate totals
