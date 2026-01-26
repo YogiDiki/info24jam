@@ -65,25 +65,38 @@
                 </button>
             </div>
             
+            <!-- Search Bar -->
+            <div class="px-4 pb-3">
+                <div class="relative">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Cari lokasi, kategori..." 
+                        class="w-full px-4 py-2.5 pl-10 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:bg-white/30 focus:outline-none"
+                    >
+                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-white/70">search</span>
+                </div>
+            </div>
+            
             <!-- Category Filters -->
             <div class="flex gap-2 px-4 pb-3 overflow-x-auto scrollbar-hide">
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 border border-white/30 whitespace-nowrap text-xs font-semibold">
+                <button class="filter-chip active" data-kategori="">
                     <span class="material-symbols-outlined text-sm">grid_view</span>
                     Semua
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
+                <button class="filter-chip" data-kategori="banjir">
                     <span class="material-symbols-outlined text-sm">waves</span>
                     Banjir
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
+                <button class="filter-chip" data-kategori="kebakaran">
                     <span class="material-symbols-outlined text-sm">local_fire_department</span>
                     Kebakaran
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
+                <button class="filter-chip" data-kategori="kecelakaan">
                     <span class="material-symbols-outlined text-sm">directions_car</span>
                     Kecelakaan
                 </button>
-                <button class="filter-chip flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/10 whitespace-nowrap text-xs font-medium">
+                <button class="filter-chip" data-kategori="kriminal">
                     <span class="material-symbols-outlined text-sm">gavel</span>
                     Kriminal
                 </button>
@@ -130,7 +143,11 @@
         </div>
 
         <!-- Bottom Action Bar -->
-        <div class="absolute bottom-6 left-4 right-4 z-10 flex gap-2">
+        <div class="absolute bottom-6 left-4 right-20 z-10 flex gap-2">
+            <button id="btnEmergency" class="flex-1 bg-red-600/90 backdrop-blur-lg text-white rounded-xl px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2 hover:bg-red-700 transition">
+                <span class="material-symbols-outlined text-lg">call</span>
+                📞 Darurat
+            </button>
             <button id="btnToggleView" class="flex-1 bg-card-dark/90 backdrop-blur-lg text-white rounded-xl px-4 py-3 font-semibold text-sm shadow-xl border border-white/10 flex items-center justify-center gap-2 hover:bg-card-dark transition">
                 <span class="material-symbols-outlined text-lg">list</span>
                 📋 List
@@ -145,6 +162,67 @@
 
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container fixed top-20 right-4 space-y-2 z-[9999]"></div>
+
+    <!-- Modal: Emergency Numbers -->
+    <div id="modalEmergency" class="modal-overlay fixed inset-0 bg-black/60 hidden flex items-end justify-center p-0 z-50">
+        <div class="w-full max-h-[70vh] bg-background-dark rounded-t-3xl overflow-hidden animate-slideup">
+            <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-6 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold">📞 Nomor Darurat</h2>
+                    <p class="text-sm opacity-90 mt-1">Hubungi layanan darurat</p>
+                </div>
+                <button id="btnCloseEmergency" class="flex items-center justify-center w-10 h-10 hover:bg-white/20 rounded-lg transition">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-3">
+                <a href="tel:112" class="block bg-red-600 hover:bg-red-700 text-white p-4 rounded-xl transition">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-3xl">emergency</span>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg">112</div>
+                            <div class="text-sm opacity-90">Layanan Darurat Nasional</div>
+                        </div>
+                        <span class="material-symbols-outlined">call</span>
+                    </div>
+                </a>
+                
+                <a href="tel:110" class="block bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl transition">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-3xl">local_police</span>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg">110</div>
+                            <div class="text-sm opacity-90">Polisi</div>
+                        </div>
+                        <span class="material-symbols-outlined">call</span>
+                    </div>
+                </a>
+                
+                <a href="tel:113" class="block bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-xl transition">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-3xl">local_fire_department</span>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg">113</div>
+                            <div class="text-sm opacity-90">Pemadam Kebakaran</div>
+                        </div>
+                        <span class="material-symbols-outlined">call</span>
+                    </div>
+                </a>
+                
+                <a href="tel:118" class="block bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl transition">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-3xl">ambulance</span>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg">118/119</div>
+                            <div class="text-sm opacity-90">Ambulans</div>
+                        </div>
+                        <span class="material-symbols-outlined">call</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: List View -->
     <div id="listPanel" class="hidden fixed inset-0 bg-background-dark z-40 flex flex-col">

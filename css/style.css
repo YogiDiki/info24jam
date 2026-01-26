@@ -1,5 +1,5 @@
 /* ==========================================
-   Info 24 Jam - Custom Styles
+   Info 24 Jam - Custom Styles (Fixed)
    ========================================== */
 
 * {
@@ -39,6 +39,32 @@ body, html {
     position: relative;
     z-index: 1;
     background: #0a0a0c;
+}
+
+/* HIDE LEAFLET ATTRIBUTION COMPLETELY */
+.leaflet-control-attribution {
+    display: none !important;
+}
+
+.leaflet-bottom.leaflet-right {
+    bottom: 80px !important; /* Move zoom control up to avoid FAB */
+}
+
+/* Pulsing effect for user marker */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+.pulse-marker {
+    animation: pulse 2s infinite;
 }
 
 /* Modals */
@@ -160,10 +186,11 @@ body, html {
     text-overflow: ellipsis;
 }
 
-/* Report Cards */
+/* Report Cards - FIXED: Now clickable! */
 .report-card {
     transition: all 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer; /* Make it obvious it's clickable */
 }
 
 .report-card:hover {
@@ -209,18 +236,36 @@ button:disabled:active {
     transform: none;
 }
 
-/* Filter Chips */
+/* Filter Chips - FIXED: Now clickable! */
 .filter-chip {
     transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+    color: white;
 }
 
 .filter-chip:hover {
     background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .filter-chip.active {
     background: rgba(255, 255, 255, 0.3);
     border-color: rgba(255, 255, 255, 0.5);
+    font-weight: 600;
+}
+
+.filter-chip:active {
+    transform: scale(0.95);
 }
 
 /* Loading Animation */
@@ -258,33 +303,36 @@ button:disabled:active {
 
 /* Leaflet Popup Customization */
 .leaflet-popup-content-wrapper {
-    background: #181111;
-    color: white;
+    background: #ffffff;
+    color: #1f2937;
     border-radius: 12px;
-    padding: 0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .leaflet-popup-content {
     margin: 0;
     min-width: 250px;
+    font-family: 'Public Sans', system-ui, sans-serif;
 }
 
 .leaflet-popup-tip {
-    background: #181111;
+    background: #ffffff;
 }
 
-.report-detail-btn {
+/* Make popup buttons work */
+.leaflet-popup button {
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.report-detail-btn:hover {
+.leaflet-popup button:hover {
     background: #c00f0f !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
 }
 
-.report-detail-btn:active {
+.leaflet-popup button:active {
     transform: scale(0.95);
 }
 
@@ -302,6 +350,21 @@ textarea:focus {
     ring-color: rgba(212, 17, 17, 0.5);
 }
 
+/* Search Input */
+#searchInput {
+    transition: all 0.2s ease;
+}
+
+#searchInput:focus {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Emergency Numbers Links */
+a[href^="tel:"] {
+    text-decoration: none;
+    color: inherit;
+}
+
 /* Mobile Optimizations */
 @media (max-width: 640px) {
     .modal-overlay > div {
@@ -310,6 +373,11 @@ textarea:focus {
     
     #map {
         touch-action: pan-x pan-y;
+    }
+    
+    /* Move zoom control on mobile */
+    .leaflet-bottom.leaflet-right {
+        bottom: 90px !important;
     }
 }
 
@@ -341,10 +409,17 @@ textarea:focus {
     }
 }
 
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+    outline: 2px solid #d41111;
+    outline-offset: 2px;
+}
+
 /* Print Styles */
 @media print {
     #btnLapor,
     #btnToggleView,
+    #btnEmergency,
     #installPrompt,
     header {
         display: none !important;
@@ -354,4 +429,41 @@ textarea:focus {
         position: relative;
         height: 400px;
     }
+    
+    .leaflet-control-zoom {
+        display: none !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .filter-chip {
+        border-width: 2px;
+    }
+    
+    .report-card {
+        border-width: 2px;
+    }
+}
+
+/* Prevent text selection on UI elements */
+header,
+.filter-chip,
+.report-card,
+button {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection in content areas */
+#reportsList p,
+#infoContent p,
+textarea,
+input {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
