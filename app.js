@@ -17,7 +17,7 @@ const CATEGORY_COLORS = {
 };
 
 // Global State
-let map, userMarker, supabase;
+let map, userMarker, supabaseClient;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let reports = new Map();
 let isAdmin = false;
@@ -29,7 +29,7 @@ async function init() {
     console.log('🚀 Starting Info 24 Jam...');
     
     await waitForSupabase();
-    supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+    supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
     
     initMap();
     getUserLocation();
@@ -56,7 +56,7 @@ function waitForSupabase() {
 // Supabase Operations
 async function loadReports() {
     try {
-        const { data } = await supabase
+        const { data } = await supabaseClient
             .from('reports')
             .select('*')
             .order('created_at', { ascending: false });
@@ -71,7 +71,7 @@ async function loadReports() {
 
 async function submitReport(formData) {
     try {
-        const { error } = await supabase.from('reports').insert([formData]);
+        const { error } = await supabaseClient.from('reports').insert([formData]);
         if (error) throw error;
         
         closeModal('modalLapor');
@@ -88,7 +88,7 @@ async function deleteReport(id) {
     if (!confirm('Hapus laporan?')) return;
     
     try {
-        const { error } = await supabase.from('reports').delete().eq('id', id);
+        const { error } = await supabaseClient.from('reports').delete().eq('id', id);
         if (error) throw error;
         
         // Remove from map & memory
@@ -347,7 +347,7 @@ function removeImage() {
 // Report List
 async function showReportList() {
     try {
-        const { data } = await supabase
+        const { data } = await supabaseClient
             .from('reports')
             .select('*')
             .order('created_at', { ascending: false })
@@ -427,7 +427,7 @@ function createReportCard(report) {
 // Statistics
 async function showStatistics() {
     try {
-        const { data } = await supabase.from('reports').select('*');
+        const { data } = await supabaseClient.from('reports').select('*');
         
         const stats = {};
         const categories = ['banjir', 'kebakaran', 'kecelakaan', 'kriminal', 'macet', 'lainnya'];
