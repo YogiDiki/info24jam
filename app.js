@@ -186,14 +186,27 @@ function updateUserMarker() {
     if (userMarker) {
         userMarker.setLatLng([userLocation.lat, userLocation.lng]);
     } else {
-        userMarker = L.circleMarker([userLocation.lat, userLocation.lng], {
-            radius: 10,
-            fillColor: '#EF4444',
-            color: '#DC2626',
-            weight: 3,
-            opacity: 1,
-            fillOpacity: 0.8
-        }).addTo(map).bindPopup('<strong>📍 Lokasi Anda</strong>');
+        // Buat custom icon untuk user
+        const userIcon = L.divIcon({
+            className: 'user-location-marker',
+            html: `
+                <div class="user-marker-container">
+                    <div class="user-marker-pulse"></div>
+                    <div class="user-marker-inner">
+                        <div class="user-marker-dot"></div>
+                        <div class="user-marker-arrow">▲</div>
+                    </div>
+                </div>
+            `,
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+        
+        userMarker = L.marker([userLocation.lat, userLocation.lng], {
+            icon: userIcon,
+            zIndexOffset: 1000 // Selalu di atas marker lain
+        }).addTo(map).bindPopup('<strong>📍 Lokasi Anda Saat Ini</strong>');
     }
 }
 
@@ -201,26 +214,107 @@ function addMarker(report) {
     if (reports.has(report.id)) return;
     
     const color = CATEGORY_COLORS[report.kategori] || '#6B7280';
-    const marker = L.circleMarker([report.latitude, report.longitude], {
-        radius: 10,
-        fillColor: color,
-        color: color,
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8
+    
+    // Buat icon yang berbeda untuk laporan
+    const reportIcon = L.divIcon({
+        className: 'report-marker',
+        html: `
+            <div class="report-marker-container" style="background:${color}">
+                <div class="report-marker-icon">
+                    ${getCategoryIcon(report.kategori)}
+                </div>
+            </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+    });
+    
+    const marker = L.marker([report.latitude, report.longitude], {
+        icon: reportIcon,
+        zIndexOffset: 500
     }).addTo(map);
     
     marker.bindPopup(`
         <div style="padding:8px;min-width:200px">
-            <strong style="color:${color}">${report.kategori.toUpperCase()}</strong><br>
-            <p style="margin:8px 0;color:#333">${report.deskripsi}</p>
-            ${report.foto_url ? `<img src="${report.foto_url}" style="width:100%;border-radius:8px;margin:8px 0"/>` : ''}
-            ${report.pelapor_nama ? `<small style="color:#666">👤 ${report.pelapor_nama}</small><br>` : ''}
-            <small style="color:#666">⏰ ${new Date(report.created_at).toLocaleString('id-ID')}</small>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="width:12px;height:12px;background:${color};border-radius:2px"></div>
+                <strong style="color:${color}">${report.kategori.toUpperCase()}</strong>
+            </div>
+            <p style="margin:8px 0;color:#333;font-size:14px">${report.deskripsi}</p>
+            ${report.foto_url ? `<img src="${report.foto_url}" style="width:100%;border-radius:8px;margin:8px 0;max-height:150px;object-fit:cover"/>` : ''}
+            <div style="font-size:12px;color:#666;margin-top:8px">
+                ${report.pelapor_nama ? `<div>👤 ${report.pelapor_nama}</div>` : ''}
+                <div>⏰ ${new Date(report.created_at).toLocaleString('id-ID')}</div>
+            </div>
         </div>
     `);
     
     reports.set(report.id, { marker, data: report });
+}
+
+
+//acuracy circle
+let accuracyCircle = null;
+
+function updateUserLocation(pos) {
+    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    
+    // Update marker
+    updateUserMarker();
+    
+    // Update accuracy circle
+    if (accuracyCircle) {
+        accuracyCircle.setLatLng([userLocation.lat, userLocation.lng]);
+        accuracyCircle.setRadius(pos.coords.accuracy);
+    } else {
+        accuracyCircle = L.circle([userLocation.lat, userLocation.lng], {
+            radius: pos.coords.accuracy,
+            color: '#4285f4',
+            fillColor: '#4285f4',
+            fillOpacity: 0.1,
+            weight: 1,
+            dashArray: '5, 5'
+        }).addTo(map);
+    }
+    
+    // Center map jika pertama kali
+    if (!window.locationLoaded) {
+        map.setView([userLocation.lat, userLocation.lng], 15);
+        window.locationLoaded = true;
+    }
+    
+    // Update location text
+    const el = document.getElementById('locationText');
+    if (el) el.textContent = `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`;
+}
+
+// Update getUserLocation()
+function getUserLocation() {
+    if (!navigator.geolocation) return;
+    
+    navigator.geolocation.watchPosition(
+        updateUserLocation,
+        err => console.warn('Geolocation error:', err),
+        { 
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 15000
+        }
+    );
+}
+
+// Helper untuk icon kategori
+function getCategoryIcon(kategori) {
+    const icons = {
+        banjir: '💧',
+        kebakaran: '🔥',
+        kecelakaan: '🚗',
+        kriminal: '👮',
+        macet: '🚦',
+        lainnya: '📍'
+    };
+    return icons[kategori] || '📍';
 }
 
 function filterReports(kategori) {
