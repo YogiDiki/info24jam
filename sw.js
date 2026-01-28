@@ -1,14 +1,63 @@
-/* Service Worker - Info 24 Jam (FIXED) */
+/* Service Worker - Info 24 Jam (PWA + FCM Combined) */
 
-const CACHE_NAME = 'info24jam-v1.0.1';
+// Import Firebase scripts for FCM
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+const CACHE_NAME = 'info24jam-v1.0.2';
 const urlsToCache = [
     '/',
     '/index.html',
     '/app.js',
+    '/config.js',
     '/manifest.json',
     '/icons/icon-192.png',
     '/icons/icon-512.png'
 ];
+
+// ==========================================
+// Firebase Cloud Messaging Setup
+// ==========================================
+const firebaseConfig = {
+    apiKey: "AIzaSyBtpmKwxXjlD9U4UcmQIoFIzgRpVFDjG8g",
+    authDomain: "info24jam-82a85.firebaseapp.com",
+    projectId: "info24jam-82a85",
+    storageBucket: "info24jam-82a85.firebasestorage.app",
+    messagingSenderId: "498489273117",
+    appId: "1:498489273117:web:832a63a7515c6866234ff4",
+    measurementId: "G-GP4NPJ73VT"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
+
+// Handle background FCM messages
+messaging.onBackgroundMessage((payload) => {
+    console.log('[SW] FCM background message:', payload);
+    
+    const notificationTitle = payload.notification?.title || 'Info 24 Jam';
+    const notificationOptions = {
+        body: payload.notification?.body || 'Anda memiliki notifikasi baru',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-192.png',
+        vibrate: [200, 100, 200],
+        data: payload.data || {},
+        actions: [
+            { action: 'view', title: '👁️ Lihat' },
+            { action: 'close', title: '❌ Tutup' }
+        ],
+        tag: 'info24jam-notification',
+        requireInteraction: false,
+        timestamp: Date.now()
+    };
+    
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// ==========================================
+// PWA Service Worker Events
+// ==========================================
 
 // Install Service Worker
 self.addEventListener('install', event => {
@@ -18,15 +67,13 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('[SW] Caching core files');
-                // Cache core files first, ignore external resources during install
                 return cache.addAll(urlsToCache.filter(url => url.startsWith('/')));
             })
             .catch(err => {
-                console.error('[SW] Cache error during install:', err);
+                console.error('[SW] Cache error:', err);
             })
     );
     
-    // Force immediate activation
     self.skipWaiting();
 });
 
@@ -55,40 +102,29 @@ self.addEventListener('activate', event => {
 
 // Fetch Strategy: Network First, fallback to Cache
 self.addEventListener('fetch', event => {
-    // Skip non-GET requests
     if (event.request.method !== 'GET') return;
-    
-    // Skip chrome extensions and other protocols
     if (!event.request.url.startsWith('http')) return;
     
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // Only cache successful responses
                 if (response && response.status === 200) {
                     const responseClone = response.clone();
-                    
                     caches.open(CACHE_NAME).then(cache => {
                         cache.put(event.request, responseClone);
                     });
                 }
-                
                 return response;
             })
             .catch(() => {
-                // Network failed, try cache
                 return caches.match(event.request)
                     .then(cachedResponse => {
-                        if (cachedResponse) {
-                            return cachedResponse;
-                        }
+                        if (cachedResponse) return cachedResponse;
                         
-                        // Return offline page for navigation requests
                         if (event.request.mode === 'navigate') {
                             return caches.match('/index.html');
                         }
                         
-                        // Return generic offline response
                         return new Response('Offline', {
                             status: 503,
                             statusText: 'Service Unavailable',
@@ -101,7 +137,7 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// Push Notification Handler
+// Push Notification Handler (for web push API)
 self.addEventListener('push', event => {
     console.log('[SW] Push received');
     
@@ -142,18 +178,15 @@ self.addEventListener('notificationclick', event => {
     
     if (event.action === 'close') return;
     
-    // Open app
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then(clientList => {
-                // Check if app is already open
                 for (let client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
                         return client.focus();
                     }
                 }
                 
-                // Open new window
                 if (clients.openWindow) {
                     return clients.openWindow('/');
                 }
@@ -161,4 +194,4 @@ self.addEventListener('notificationclick', event => {
     );
 });
 
-console.log('[SW] Service Worker loaded successfully');
+console.log('[SW] Service Worker (PWA + FCM) loaded successfully');

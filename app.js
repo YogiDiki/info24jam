@@ -1578,89 +1578,70 @@ function setupPWA() {
             .then((registration) => {
                 console.log('✅ SW registered');
             })
-            .catch(err => console.log('SW error:', err));
+            .catch(err => console.log('❌ SW error:', err));
     }
     
+    // Capture install prompt
     window.addEventListener('beforeinstallprompt', e => {
+        console.log('📥 beforeinstallprompt event captured');
         e.preventDefault();
         deferredPrompt = e;
-        document.getElementById('pwaInstallBanner').style.display = 'flex';
+        
+        // Show install button
+        const installBtn = document.getElementById('pwaInstallBanner');
+        if (installBtn) {
+            installBtn.style.display = 'flex';
+        }
     });
     
     window.addEventListener('appinstalled', () => {
+        console.log('✅ PWA installed');
         deferredPrompt = null;
-        document.getElementById('pwaInstallBanner').style.display = 'none';
-        notify('✅ Aplikasi berhasil diinstall!', 'success');
-    });
-    
-    setTimeout(() => {
-        const installBtn = document.getElementById('pwaInstallBanner');
-        if (installBtn.style.display !== 'none') {
-            installBtn.style.display = 'flex';
-        }
-    }, 1000);
-}
-
-async function requestNotificationPermission() {
-    if (!('Notification' in window)) {
-        notify('❌ Browser tidak mendukung notifikasi', 'error');
-        return false;
-    }
-    
-    try {
-        const permission = await Notification.requestPermission();
         
-        if (permission === 'granted') {
-            notify('✅ Notifikasi diaktifkan!', 'success');
-            
-            const registration = await navigator.serviceWorker.ready;
-            return true;
-        } else {
-            notify('⚠️ Izin notifikasi ditolak', 'warning');
-            return false;
+        const installBtn = document.getElementById('pwaInstallBanner');
+        if (installBtn) {
+            installBtn.style.display = 'none';
         }
-    } catch (err) {
-        console.error('Notification permission error:', err);
-        notify('❌ Gagal meminta izin notifikasi', 'error');
-        return false;
-    }
-}
-
-function sendLocalNotification(title, body, data = {}) {
-    if (!('Notification' in window) || Notification.permission !== 'granted') {
-        console.log('Notifications not available');
-        return;
-    }
-    
-    const soundEnabled = localStorage.getItem('info24jam_sound') !== 'false';
-    
-    navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(title, {
-            body: body,
-            icon: '/icons/icon-192.png',
-            badge: '/icons/icon-192.png',
-            vibrate: [200, 100, 200],
-            data: data,
-            actions: [
-                { action: 'view', title: 'Lihat' },
-                { action: 'close', title: 'Tutup' }
-            ],
-            silent: !soundEnabled
-        });
+        
+        notify('✅ Aplikasi berhasil diinstall!', 'success');
     });
 }
 
 async function installPWA() {
+    console.log('🔘 Install clicked. deferredPrompt:', !!deferredPrompt);
+    
     if (!deferredPrompt) {
-        return notify('Aplikasi sudah terinstall atau tidak dapat diinstall di browser ini', 'info');
+        // Kasih instruksi manual
+        notify('📱 Install via menu Chrome → "Add to Home Screen"', 'info');
+        
+        // Auto-open Chrome menu di Android (experimental)
+        if (navigator.userAgent.toLowerCase().includes('android')) {
+            setTimeout(() => {
+                notify('💡 Tap ⋮ (menu) di pojok kanan atas → Install app', 'info');
+            }, 2000);
+        }
+        return;
     }
     
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
+    try {
+        // Show prompt
+        deferredPrompt.prompt();
+        
+        // Wait for user response
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('👤 Install outcome:', outcome);
+        
+        if (outcome === 'accepted') {
+            notify('✅ Menginstall aplikasi...', 'success');
+        } else {
+            notify('ℹ️ Install dibatalkan', 'info');
+        }
+        
         deferredPrompt = null;
-        document.getElementById('pwaInstallBanner').style.display = 'none';
+        
+    } catch (err) {
+        console.error('❌ Install error:', err);
+        notify('⚠️ Gunakan menu Chrome untuk install', 'warning');
     }
 }
 
