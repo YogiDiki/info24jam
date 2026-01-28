@@ -85,6 +85,10 @@ async function initFCM() {
             console.log('✅ Firebase initialized');
         }
         
+        // ✅ WAIT FOR SERVICE WORKER TO BE READY
+        const registration = await navigator.serviceWorker.ready;
+        console.log('✅ Service Worker ready for FCM');
+        
         // Initialize Firebase Messaging
         messaging = firebase.messaging();
         console.log('✅ Firebase Messaging initialized');
@@ -95,10 +99,11 @@ async function initFCM() {
         if (permission === 'granted') {
             console.log('✅ Notification permission granted');
             
-            // Get FCM token
+            // Get FCM token (with SW registration)
             try {
                 fcmToken = await messaging.getToken({
-                    vapidKey: CONFIG.VAPID_PUBLIC_KEY
+                    vapidKey: CONFIG.VAPID_PUBLIC_KEY,
+                    serviceWorkerRegistration: registration
                 });
                 
                 if (fcmToken) {
@@ -132,18 +137,8 @@ async function initFCM() {
             }
         });
         
-        // Listen for token refresh
-        messaging.onTokenRefresh(async () => {
-            try {
-                const refreshedToken = await messaging.getToken({
-                    vapidKey: CONFIG.VAPID_PUBLIC_KEY
-                });
-                console.log('🔄 Token refreshed:', refreshedToken.substring(0, 20) + '...');
-                localStorage.setItem('info24jam_fcm_token', refreshedToken);
-            } catch (err) {
-                console.error('❌ Unable to refresh token:', err);
-            }
-        });
+        // ✅ REMOVED: onTokenRefresh - it's deprecated in Firebase v9+
+        // Token refresh is handled automatically
         
     } catch (error) {
         console.error('❌ FCM initialization error:', error);
