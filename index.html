@@ -240,6 +240,26 @@
             display: none !important;
         }
         
+
+        /* 
+        /* Hide address bar on mobile */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior: none;
+  }
+  
+  /* Optional: Hide browser UI elements */
+  header {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* For iOS PWA */
+@supports (-webkit-touch-callout: none) {
+  .modal-content {
+    max-height: -webkit-fill-available;
+  }
+}
         /* ========== FLOATING BUTTONS REDESIGN ========== */
         /* Main FAB - Lapor Button */
         .fab {
