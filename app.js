@@ -164,6 +164,60 @@ async function testFCMNotification() {
 }
 
 // ==========================================
+// Notification Utilities
+// ==========================================
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        notify('❌ Browser tidak mendukung notifikasi', 'error');
+        return false;
+    }
+    
+    try {
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            notify('✅ Notifikasi diaktifkan!', 'success');
+            return true;
+        } else {
+            notify('⚠️ Izin notifikasi ditolak', 'warning');
+            return false;
+        }
+    } catch (err) {
+        console.error('Notification permission error:', err);
+        notify('❌ Gagal meminta izin notifikasi', 'error');
+        return false;
+    }
+}
+
+function sendLocalNotification(title, body, data = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        console.log('⚠️ Notifications not available or not permitted');
+        return;
+    }
+    
+    const soundEnabled = localStorage.getItem('info24jam_sound') !== 'false';
+    
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, {
+                body: body,
+                icon: '/icons/icon-192.png',
+                badge: '/icons/icon-192.png',
+                vibrate: [200, 100, 200],
+                data: data,
+                actions: [
+                    { action: 'view', title: 'Lihat' },
+                    { action: 'close', title: 'Tutup' }
+                ],
+                silent: !soundEnabled,
+                tag: 'info24jam-local-notification',
+                requireInteraction: false
+            });
+        });
+    }
+}
+
+// ==========================================
 // Supabase Operations
 // ==========================================
 async function loadReports() {
