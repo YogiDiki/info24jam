@@ -20,10 +20,11 @@ const CONFIG = {
         storageBucket: "info24jam-82a85.firebasestorage.app",
         messagingSenderId: "498489273117",
         appId: "1:498489273117:web:832a63a7515c6866234ff4",
-        measurementId: "G-GP4NPJ73VT"
+        measurementId: "G-GP4NPJ73VT",
+        vapidKey: "BBLnXXpSQCDro6B4Tndg9oIb2DumuwegFCa4c7mMiJqJnuVlsRXrAFMOmehMg3T6lwmaZonaS_LuwDZASszAYlk"
     },
     
-    // VAPID Key - Ganti dengan key Anda dari Firebase Console
+    // VAPID Key - From Firebase Console
     // Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
     VAPID_PUBLIC_KEY: 'BBLnXXpSQCDro6B4Tndg9oIb2DumuwegFCa4c7mMiJqJnuVlsRXrAFMOmehMg3T6lwmaZonaS_LuwDZASszAYlk'
 };

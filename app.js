@@ -1,11 +1,7 @@
 /* Info 24 Jam - Complete App.js dengan semua fitur aktif */
 
-const CONFIG = {
-    SUPABASE_URL: 'https://brdyvgmnidzxrwidpzqm.supabase.co',
-    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyZHl2Z21uaWR6eHJ3aWRwenFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NjI0MjgsImV4cCI6MjA4NDUzODQyOH0.83XgYx8_94fnVbPd0N7q9FAfPFUTjJcliDOzTGNzfRQ',
-    CLOUDINARY_CLOUD: 'dj1f8hjcj',
-    CLOUDINARY_PRESET: 'laporan_warga'
-};
+// CONFIG already loaded from config.js - no need to redeclare
+
 
 const CATEGORY_COLORS = {
     banjir: '#3B82F6',
