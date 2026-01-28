@@ -71,6 +71,20 @@ async function initFCM() {
             return;
         }
         
+        // ✅ INITIALIZE FIREBASE FIRST!
+        if (!firebase.apps.length) {
+            firebase.initializeApp({
+                apiKey: CONFIG.FIREBASE?.apiKey || "AIzaSyBtpmKwxXjlD9U4UcmQIoFIzgRpVFDjG8g",
+                authDomain: CONFIG.FIREBASE?.authDomain || "info24jam-82a85.firebaseapp.com",
+                projectId: CONFIG.FIREBASE?.projectId || "info24jam-82a85",
+                storageBucket: CONFIG.FIREBASE?.storageBucket || "info24jam-82a85.firebasestorage.app",
+                messagingSenderId: CONFIG.FIREBASE?.messagingSenderId || "498489273117",
+                appId: CONFIG.FIREBASE?.appId || "1:498489273117:web:832a63a7515c6866234ff4",
+                measurementId: CONFIG.FIREBASE?.measurementId || "G-GP4NPJ73VT"
+            });
+            console.log('✅ Firebase initialized');
+        }
+        
         // Initialize Firebase Messaging
         messaging = firebase.messaging();
         console.log('✅ Firebase Messaging initialized');
@@ -313,19 +327,72 @@ function addMarker(report) {
 // Geolocation
 // ==========================================
 function getUserLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+        console.warn('⚠️ Geolocation not supported');
+        return;
+    }
     
+    // Get current position IMMEDIATELY
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            userLocation = { 
+                lat: pos.coords.latitude, 
+                lng: pos.coords.longitude 
+            };
+            
+            console.log('📍 Initial location:', userLocation);
+            
+            // Update marker and center map
+            updateUserMarker();
+            map.setView([userLocation.lat, userLocation.lng], 15);
+            
+            // Update location text
+            const el = document.getElementById('locationText');
+            if (el) {
+                el.textContent = `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`;
+            }
+        },
+        err => {
+            console.error('❌ Geolocation error:', err.message);
+            notify('⚠️ Tidak bisa mendapatkan lokasi. Gunakan lokasi default.', 'warning');
+        },
+        { 
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+    
+    // Then watch for position changes
     navigator.geolocation.watchPosition(
         pos => {
-            userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            updateUserMarker();
-            map.setView([userLocation.lat, userLocation.lng], 13);
+            const newLat = pos.coords.latitude;
+            const newLng = pos.coords.longitude;
             
-            const el = document.getElementById('locationText');
-            if (el) el.textContent = `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`;
+            // Only update if position changed significantly (> 10 meters)
+            const distance = Math.sqrt(
+                Math.pow((newLat - userLocation.lat) * 111000, 2) + 
+                Math.pow((newLng - userLocation.lng) * 111000, 2)
+            );
+            
+            if (distance > 10) {
+                userLocation = { lat: newLat, lng: newLng };
+                console.log('📍 Location updated:', userLocation);
+                
+                updateUserMarker();
+                
+                const el = document.getElementById('locationText');
+                if (el) {
+                    el.textContent = `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`;
+                }
+            }
         },
-        err => console.warn('Geolocation error:', err),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        err => console.warn('⚠️ Watch position error:', err),
+        { 
+            enableHighAccuracy: true, 
+            maximumAge: 5000,
+            timeout: 10000
+        }
     );
 }
 
