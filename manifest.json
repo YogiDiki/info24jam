@@ -1,16 +1,53 @@
 {
-  "name": "Info 24 Jam - Lapor Darurat",
+  "name": "Info 24 Jam - Layanan Informasi Warga",
   "short_name": "Info24Jam",
-  "description": "Platform crowdsourcing darurat real-time untuk warga",
+  "description": "Platform pelaporan darurat dan informasi warga 24 jam real-time",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#EF4444",
-  "theme_color": "#EF4444",
-  "orientation": "portrait-primary",
+  "background_color": "#FDFBF7",
+  "theme_color": "#700000",
+  "orientation": "portrait",
+  "scope": "/",
   "icons": [
+    {
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -21,10 +58,10 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["social", "utilities", "news"],
+  "categories": ["utilities", "news", "social"],
   "screenshots": [
     {
-      "src": "/screenshots/screenshot1.png",
+      "src": "/screenshots/screenshot-1.png",
       "sizes": "540x720",
       "type": "image/png"
     }
@@ -33,8 +70,20 @@
     {
       "name": "Buat Laporan",
       "short_name": "Lapor",
-      "description": "Buat laporan darurat baru",
-      "url": "/?action=report",
+      "description": "Laporkan kejadian darurat",
+      "url": "/?action=lapor",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Nomor Darurat",
+      "short_name": "Darurat",
+      "description": "Hubungi nomor darurat",
+      "url": "/?action=emergency",
       "icons": [
         {
           "src": "/icons/icon-192.png",
@@ -43,6 +92,26 @@
       ]
     }
   ],
-  "related_applications": [],
-  "prefer_related_applications": false
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "image",
+          "accept": ["image/*"]
+        }
+      ]
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+info24jam",
+      "url": "/?report=%s"
+    }
+  ]
 }

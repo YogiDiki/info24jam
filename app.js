@@ -79,6 +79,17 @@ async function submitReport(formData) {
         
         closeModal('modalLapor');
         notify('✅ Laporan terkirim!', 'success');
+        
+        // Send notification to all users
+        const notifEnabled = localStorage.getItem('info24jam_notif') !== 'false';
+        if (notifEnabled && Notification.permission === 'granted') {
+            sendLocalNotification(
+                '🚨 Laporan Baru!',
+                `${formData.kategori.toUpperCase()}: ${formData.deskripsi.substring(0, 100)}...`,
+                { reportId: formData.id, type: 'new_report' }
+            );
+        }
+        
         await loadReports();
     } catch (err) {
         console.error('Submit error:', err);
@@ -603,9 +614,30 @@ function showSettings() {
     const toggleRefresh = document.getElementById('toggleRefresh');
     
     if (toggleNotif) {
-        toggleNotif.addEventListener('change', e => {
-            localStorage.setItem('info24jam_notif', e.target.checked);
-            notify(e.target.checked ? '✅ Notifikasi aktif' : '⚠️ Notifikasi nonaktif', 'info');
+        toggleNotif.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                // Request notification permission
+                const granted = await requestNotificationPermission();
+                if (!granted) {
+                    e.target.checked = false;
+                    localStorage.setItem('info24jam_notif', 'false');
+                    return;
+                }
+                localStorage.setItem('info24jam_notif', 'true');
+                notify('✅ Notifikasi aktif', 'success');
+                
+                // Send test notification
+                setTimeout(() => {
+                    sendLocalNotification(
+                        '🔔 Notifikasi Aktif',
+                        'Anda akan menerima pemberitahuan untuk laporan baru',
+                        { type: 'test' }
+                    );
+                }, 1000);
+            } else {
+                localStorage.setItem('info24jam_notif', 'false');
+                notify('⚠️ Notifikasi nonaktif', 'info');
+            }
         });
     }
     
@@ -814,7 +846,7 @@ function showNews() {
             content: 'Sistem pelaporan warga kini lebih cepat dan responsif dengan update terbaru.',
             category: 'Update',
             date: '2024-01-28',
-            image: 'https://via.placeholder.com/400x200/700000/FFFFFF?text=Update+Sistem'
+            image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzcwMDAwMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+VXBkYXRlIFNpc3RlbTwvdGV4dD48L3N2Zz4='
         },
         {
             id: 2,
@@ -822,7 +854,7 @@ function showNews() {
             content: 'Hindari melintas di area banjir, matikan listrik, dan segera hubungi nomor darurat 112.',
             category: 'Edukasi',
             date: '2024-01-27',
-            image: 'https://via.placeholder.com/400x200/3B82F6/FFFFFF?text=Safety+Tips'
+            image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzNCODJGNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+U2FmZXR5IFRpcHM8L3RleHQ+PC9zdmc+'
         },
         {
             id: 3,
@@ -830,7 +862,7 @@ function showNews() {
             content: 'Info 24 Jam kini terintegrasi dengan Polisi, Pemadam, dan Dinas terkait.',
             category: 'Berita',
             date: '2024-01-26',
-            image: 'https://via.placeholder.com/400x200/EF4444/FFFFFF?text=Collaboration'
+            image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI0VGNDQ0NCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+Q29sbGFib3JhdGlvbjwvdGV4dD48L3N2Zz4='
         },
         {
             id: 4,
@@ -838,7 +870,7 @@ function showNews() {
             content: 'Sertakan foto, lokasi akurat, dan deskripsi detail untuk laporan yang efektif.',
             category: 'Tutorial',
             date: '2024-01-25',
-            image: 'https://via.placeholder.com/400x200/FBBF24/FFFFFF?text=How+To'
+            image: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI0ZCQkYyNCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+SG93IFRvPC90ZXh0Pjwvc3ZnPg=='
         }
     ];
     
@@ -1320,7 +1352,12 @@ function updateAdminUI() {
 function setupPWA() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
-            .then(() => console.log('✅ SW registered'))
+            .then((registration) => {
+                console.log('✅ SW registered');
+                
+                // Setup push notifications
+                setupPushNotifications(registration);
+            })
             .catch(err => console.log('SW error:', err));
     }
     
@@ -1342,6 +1379,133 @@ function setupPWA() {
             installBtn.style.display = 'flex';
         }
     }, 1000);
+}
+
+// Push Notifications Setup
+async function setupPushNotifications(registration) {
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+        console.log('❌ Browser does not support notifications');
+        return;
+    }
+    
+    // Check notification permission
+    if (Notification.permission === 'granted') {
+        console.log('✅ Notification permission granted');
+        subscribeToPush(registration);
+    } else if (Notification.permission !== 'denied') {
+        // Request permission when user enables notifications in settings
+        console.log('⏳ Notification permission not determined');
+    }
+}
+
+async function subscribeToPush(registration) {
+    try {
+        const notifEnabled = localStorage.getItem('info24jam_notif') !== 'false';
+        if (!notifEnabled) return;
+        
+        // Check if already subscribed
+        let subscription = await registration.pushManager.getSubscription();
+        
+        if (!subscription) {
+            // Subscribe to push notifications
+            // Note: You'll need to get your VAPID public key from Firebase
+            const vapidPublicKey = 'BBLnXXpSQCDro6B4Tndg9oIb2DumuwegFCa4c7mMiJqJnuVlsRXrAFMOmehMg3T6lwmaZonaS_LuwDZASszAYlk'; // Replace with your actual key
+            
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+            });
+            
+            console.log('✅ Push subscription successful');
+            
+            // Send subscription to your server
+            await sendSubscriptionToServer(subscription);
+        }
+    } catch (err) {
+        console.error('❌ Push subscription error:', err);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+    
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+async function sendSubscriptionToServer(subscription) {
+    // Send subscription to your backend
+    // This is where you'd integrate with Firebase Cloud Messaging
+    console.log('Subscription object:', subscription);
+    
+    // Example: Send to your server
+    // await fetch('/api/subscribe', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(subscription)
+    // });
+}
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        notify('❌ Browser tidak mendukung notifikasi', 'error');
+        return false;
+    }
+    
+    try {
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            notify('✅ Notifikasi diaktifkan!', 'success');
+            
+            // Get service worker registration
+            const registration = await navigator.serviceWorker.ready;
+            await subscribeToPush(registration);
+            
+            return true;
+        } else {
+            notify('⚠️ Izin notifikasi ditolak', 'warning');
+            return false;
+        }
+    } catch (err) {
+        console.error('Notification permission error:', err);
+        notify('❌ Gagal meminta izin notifikasi', 'error');
+        return false;
+    }
+}
+
+// Send local notification (for testing)
+function sendLocalNotification(title, body, data = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        console.log('Notifications not available');
+        return;
+    }
+    
+    const soundEnabled = localStorage.getItem('info24jam_sound') !== 'false';
+    
+    navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, {
+            body: body,
+            icon: '/icons/icon-192.png',
+            badge: '/icons/icon-192.png',
+            vibrate: [200, 100, 200],
+            data: data,
+            actions: [
+                { action: 'view', title: 'Lihat' },
+                { action: 'close', title: 'Tutup' }
+            ],
+            silent: !soundEnabled
+        });
+    });
 }
 
 async function installPWA() {
