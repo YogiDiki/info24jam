@@ -13,12 +13,13 @@ const CATEGORY_COLORS = {
 };
 
 // Global State
-let map, userMarker, supabaseClient;
+let map, userMarker, supabaseClient, messaging;
 let userLocation = { lat: -6.2088, lng: 106.8456 };
 let reports = new Map();
 let isAdmin = false;
 let deferredPrompt = null;
 let uploadedImageUrl = null;
+let fcmToken = null;
 
 // Initialize
 async function init() {
@@ -33,6 +34,7 @@ async function init() {
     await loadReports();
     checkAdmin();
     setupPWA();
+    await initFCM(); // Initialize Firebase Cloud Messaging
     
     // Force show install button
     document.getElementById('pwaInstallBanner').style.display = 'flex';
@@ -52,7 +54,109 @@ function waitForSupabase() {
     });
 }
 
+// ==========================================
+// FCM (Firebase Cloud Messaging) Setup
+// ==========================================
+async function initFCM() {
+    try {
+        // Check if Firebase is loaded
+        if (typeof firebase === 'undefined') {
+            console.warn('⚠️ Firebase not loaded, FCM unavailable');
+            return;
+        }
+        
+        // Check if browser supports notifications
+        if (!('Notification' in window)) {
+            console.warn('⚠️ Browser does not support notifications');
+            return;
+        }
+        
+        // Initialize Firebase Messaging
+        messaging = firebase.messaging();
+        console.log('✅ Firebase Messaging initialized');
+        
+        // Request permission and get token
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            console.log('✅ Notification permission granted');
+            
+            // Get FCM token
+            try {
+                fcmToken = await messaging.getToken({
+                    vapidKey: CONFIG.VAPID_PUBLIC_KEY
+                });
+                
+                if (fcmToken) {
+                    console.log('✅ FCM Token received:', fcmToken.substring(0, 20) + '...');
+                    
+                    // Save token to localStorage (optional: send to backend)
+                    localStorage.setItem('info24jam_fcm_token', fcmToken);
+                    
+                    // Show success notification
+                    notify('🔔 Notifikasi FCM aktif!', 'success');
+                } else {
+                    console.log('⚠️ No registration token available');
+                }
+            } catch (err) {
+                console.error('❌ Error getting FCM token:', err);
+            }
+        } else {
+            console.log('⚠️ Notification permission denied');
+        }
+        
+        // Handle foreground messages
+        messaging.onMessage((payload) => {
+            console.log('📬 Foreground message received:', payload);
+            
+            const { title, body } = payload.notification || {};
+            
+            // Show custom notification
+            if (title && body) {
+                sendLocalNotification(title, body, payload.data);
+                notify(`🔔 ${title}: ${body}`, 'info');
+            }
+        });
+        
+        // Listen for token refresh
+        messaging.onTokenRefresh(async () => {
+            try {
+                const refreshedToken = await messaging.getToken({
+                    vapidKey: CONFIG.VAPID_PUBLIC_KEY
+                });
+                console.log('🔄 Token refreshed:', refreshedToken.substring(0, 20) + '...');
+                localStorage.setItem('info24jam_fcm_token', refreshedToken);
+            } catch (err) {
+                console.error('❌ Unable to refresh token:', err);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ FCM initialization error:', error);
+    }
+}
+
+// Test notification function
+async function testFCMNotification() {
+    if (!fcmToken) {
+        notify('⚠️ FCM token belum tersedia', 'warning');
+        return;
+    }
+    
+    console.log('🧪 Testing FCM notification...');
+    notify('✅ FCM test notification sent (check console)', 'info');
+    
+    // Simulate receiving a message
+    sendLocalNotification(
+        '🧪 Test Notification',
+        'Ini adalah test notifikasi FCM dari Info 24 Jam',
+        { type: 'test', timestamp: Date.now() }
+    );
+}
+
+// ==========================================
 // Supabase Operations
+// ==========================================
 async function loadReports() {
     try {
         const { data } = await supabaseClient
@@ -126,7 +230,9 @@ async function deleteReport(id) {
     }
 }
 
+// ==========================================
 // Map
+// ==========================================
 function initMap() {
     map = L.map('map', { zoomControl: false, attributionControl: false })
         .setView([userLocation.lat, userLocation.lng], 13);
@@ -203,7 +309,9 @@ function addMarker(report) {
     reports.set(report.id, { marker, data: report });
 }
 
+// ==========================================
 // Geolocation
+// ==========================================
 function getUserLocation() {
     if (!navigator.geolocation) return;
     
@@ -233,14 +341,43 @@ function getCategoryIcon(kategori) {
     return icons[kategori] || '📍';
 }
 
+// ==========================================
+// FIXED: Filter Reports Function
+// ==========================================
 function filterReports(kategori) {
+    console.log(`🔍 Filtering by: "${kategori || 'Semua'}"`);
+    let visibleCount = 0;
+    let hiddenCount = 0;
+    
     reports.forEach(({ marker, data }) => {
-        if (!kategori || data.kategori === kategori) {
-            if (!map.hasLayer(marker)) marker.addTo(map);
-        } else {
-            if (map.hasLayer(marker)) map.removeLayer(marker);
+        // If no filter selected (empty string), show all
+        if (!kategori || kategori === '') {
+            if (!map.hasLayer(marker)) {
+                marker.addTo(map);
+            }
+            visibleCount++;
+        } 
+        // If filter matches category, show marker
+        else if (data.kategori === kategori) {
+            if (!map.hasLayer(marker)) {
+                marker.addTo(map);
+            }
+            visibleCount++;
+        } 
+        // If filter doesn't match, hide marker
+        else {
+            if (map.hasLayer(marker)) {
+                map.removeLayer(marker);
+            }
+            hiddenCount++;
         }
     });
+    
+    console.log(`✅ Visible: ${visibleCount}, Hidden: ${hiddenCount}`);
+    
+    // Show notification
+    const categoryName = kategori ? kategori.charAt(0).toUpperCase() + kategori.slice(1) : 'Semua';
+    notify(`📊 ${categoryName}: ${visibleCount} laporan`, 'info');
 }
 
 function searchReports(query) {
@@ -257,7 +394,9 @@ function searchReports(query) {
     });
 }
 
+// ==========================================
 // Events
+// ==========================================
 function setupEvents() {
     on('menuBtn', 'click', () => openModal('modalMenu'));
     on('profileBtn', 'click', () => {
@@ -277,7 +416,9 @@ function setupEvents() {
         chip.addEventListener('click', function() {
             document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
             this.classList.add('active');
-            filterReports(this.dataset.filter || '');
+            const filterValue = this.dataset.filter || '';
+            console.log(`Filter chip clicked: "${filterValue}"`);
+            filterReports(filterValue);
         });
     });
     
@@ -314,7 +455,9 @@ function on(id, event, handler) {
     if (el) el.addEventListener(event, handler);
 }
 
+// ==========================================
 // Form Handlers
+// ==========================================
 async function handleSubmit(e) {
     e.preventDefault();
     
@@ -383,7 +526,9 @@ function removeImage() {
     uploadedImageUrl = null;
 }
 
+// ==========================================
 // Report List
+// ==========================================
 async function showReportList() {
     try {
         const { data } = await supabaseClient
@@ -460,7 +605,9 @@ function createReportCard(report) {
     `;
 }
 
+// ==========================================
 // Statistics
+// ==========================================
 async function showStatistics() {
     try {
         const { data } = await supabaseClient.from('reports').select('*');
@@ -517,11 +664,12 @@ async function showStatistics() {
     }
 }
 
-// Settings Feature - NEW
+// ==========================================
+// Settings Feature
+// ==========================================
 function showSettings() {
     const container = document.getElementById('settingsContainer');
     if (!container) {
-        // Create settings modal if not exists
         createSettingsModal();
         return;
     }
@@ -592,6 +740,22 @@ function showSettings() {
         
         <div class="settings-section">
             <h4 style="font-size:13px;font-weight:700;color:var(--accent-dark-red);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">
+                <i class="material-icons" style="vertical-align:middle;font-size:16px;margin-right:4px">bug_report</i>
+                Debug & Testing
+            </h4>
+            <button class="setting-button" onclick="testFCMNotification()">
+                <i class="material-icons">notifications_active</i>
+                <span>Test FCM Notification</span>
+            </button>
+            <div style="margin-top:10px;padding:10px;background:rgba(112,0,0,0.05);border-radius:8px;font-size:11px;">
+                <strong>FCM Status:</strong><br>
+                Token: ${fcmToken ? '✅ Active' : '❌ Not available'}<br>
+                ${fcmToken ? `ID: ${fcmToken.substring(0, 30)}...` : ''}
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <h4 style="font-size:13px;font-weight:700;color:var(--accent-dark-red);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">
                 <i class="material-icons" style="vertical-align:middle;font-size:16px;margin-right:4px">info</i>
                 Tentang
             </h4>
@@ -612,7 +776,6 @@ function showSettings() {
     if (toggleNotif) {
         toggleNotif.addEventListener('change', async (e) => {
             if (e.target.checked) {
-                // Request notification permission
                 const granted = await requestNotificationPermission();
                 if (!granted) {
                     e.target.checked = false;
@@ -622,7 +785,6 @@ function showSettings() {
                 localStorage.setItem('info24jam_notif', 'true');
                 notify('✅ Notifikasi aktif', 'success');
                 
-                // Send test notification
                 setTimeout(() => {
                     sendLocalNotification(
                         '🔔 Notifikasi Aktif',
@@ -679,7 +841,6 @@ function createSettingsModal() {
     `;
     document.body.appendChild(modal);
     
-    // Add necessary CSS
     const style = document.createElement('style');
     style.textContent = `
         .settings-section {
@@ -826,7 +987,9 @@ async function exportData() {
     }
 }
 
-// News Feature - NEW
+// ==========================================
+// News Feature
+// ==========================================
 function showNews() {
     const container = document.getElementById('newsContainer');
     if (!container) {
@@ -834,7 +997,6 @@ function showNews() {
         return;
     }
     
-    // Sample news data - bisa diganti dengan data real dari API
     const newsItems = [
         {
             id: 1,
@@ -917,7 +1079,6 @@ function createNewsModal() {
     `;
     document.body.appendChild(modal);
     
-    // Add CSS for news
     const style = document.createElement('style');
     style.textContent = `
         .news-card {
@@ -1008,7 +1169,9 @@ function showNewsDetail(newsId) {
     notify('📰 Detail berita segera hadir!', 'info');
 }
 
-// Help Feature - NEW
+// ==========================================
+// Help Feature
+// ==========================================
 function showHelp() {
     const container = document.getElementById('helpContainer');
     if (!container) {
@@ -1151,7 +1314,6 @@ function createHelpModal() {
     `;
     document.body.appendChild(modal);
     
-    // Add CSS
     const style = document.createElement('style');
     style.textContent = `
         .help-section {
@@ -1269,18 +1431,18 @@ function toggleFAQ(element) {
     const faqItem = element.closest('.faq-item');
     const isActive = faqItem.classList.contains('active');
     
-    // Close all FAQs
     document.querySelectorAll('.faq-item').forEach(item => {
         item.classList.remove('active');
     });
     
-    // Toggle clicked FAQ
     if (!isActive) {
         faqItem.classList.add('active');
     }
 }
 
-// Auto Refresh - NEW
+// ==========================================
+// Auto Refresh
+// ==========================================
 let autoRefreshInterval = null;
 
 function startAutoRefresh() {
@@ -1289,7 +1451,7 @@ function startAutoRefresh() {
     autoRefreshInterval = setInterval(async () => {
         console.log('🔄 Auto refreshing...');
         await loadReports();
-    }, 30000); // Refresh every 30 seconds
+    }, 30000);
 }
 
 function stopAutoRefresh() {
@@ -1299,7 +1461,9 @@ function stopAutoRefresh() {
     }
 }
 
+// ==========================================
 // Login/Admin
+// ==========================================
 async function handleLogin(e) {
     e.preventDefault();
     
@@ -1330,7 +1494,6 @@ function checkAdmin() {
         updateAdminUI();
     }
     
-    // Start auto refresh if enabled
     if (localStorage.getItem('info24jam_refresh') !== 'false') {
         startAutoRefresh();
     }
@@ -1344,15 +1507,14 @@ function updateAdminUI() {
     }
 }
 
+// ==========================================
 // PWA
+// ==========================================
 function setupPWA() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
                 console.log('✅ SW registered');
-                
-                // Setup push notifications
-                setupPushNotifications(registration);
             })
             .catch(err => console.log('SW error:', err));
     }
@@ -1377,80 +1539,6 @@ function setupPWA() {
     }, 1000);
 }
 
-// Push Notifications Setup
-async function setupPushNotifications(registration) {
-    // Check if notifications are supported
-    if (!('Notification' in window)) {
-        console.log('❌ Browser does not support notifications');
-        return;
-    }
-    
-    // Check notification permission
-    if (Notification.permission === 'granted') {
-        console.log('✅ Notification permission granted');
-        subscribeToPush(registration);
-    } else if (Notification.permission !== 'denied') {
-        // Request permission when user enables notifications in settings
-        console.log('⏳ Notification permission not determined');
-    }
-}
-
-async function subscribeToPush(registration) {
-    try {
-        const notifEnabled = localStorage.getItem('info24jam_notif') !== 'false';
-        if (!notifEnabled) return;
-        
-        // Check if already subscribed
-        let subscription = await registration.pushManager.getSubscription();
-        
-        if (!subscription) {
-            // Subscribe to push notifications
-            // Note: You'll need to get your VAPID public key from Firebase
-            const vapidPublicKey = 'BBLnXXpSQCDro6B4Tndg9oIb2DumuwegFCa4c7mMiJqJnuVlsRXrAFMOmehMg3T6lwmaZonaS_LuwDZASszAYlk'; // Replace with your actual key
-            
-            subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-            });
-            
-            console.log('✅ Push subscription successful');
-            
-            // Send subscription to your server
-            await sendSubscriptionToServer(subscription);
-        }
-    } catch (err) {
-        console.error('❌ Push subscription error:', err);
-    }
-}
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
-    
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
-
-async function sendSubscriptionToServer(subscription) {
-    // Send subscription to your backend
-    // This is where you'd integrate with Firebase Cloud Messaging
-    console.log('Subscription object:', subscription);
-    
-    // Example: Send to your server
-    // await fetch('/api/subscribe', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(subscription)
-    // });
-}
-
 async function requestNotificationPermission() {
     if (!('Notification' in window)) {
         notify('❌ Browser tidak mendukung notifikasi', 'error');
@@ -1463,10 +1551,7 @@ async function requestNotificationPermission() {
         if (permission === 'granted') {
             notify('✅ Notifikasi diaktifkan!', 'success');
             
-            // Get service worker registration
             const registration = await navigator.serviceWorker.ready;
-            await subscribeToPush(registration);
-            
             return true;
         } else {
             notify('⚠️ Izin notifikasi ditolak', 'warning');
@@ -1479,7 +1564,6 @@ async function requestNotificationPermission() {
     }
 }
 
-// Send local notification (for testing)
 function sendLocalNotification(title, body, data = {}) {
     if (!('Notification' in window) || Notification.permission !== 'granted') {
         console.log('Notifications not available');
@@ -1518,7 +1602,9 @@ async function installPWA() {
     }
 }
 
+// ==========================================
 // UI Helpers
+// ==========================================
 function notify(message, type = 'info') {
     const notif = document.createElement('div');
     notif.className = `notification notification-${type}`;
@@ -1563,7 +1649,9 @@ function getValue(id) {
     return document.getElementById(id)?.value || '';
 }
 
-// Update menu click handlers
+// ==========================================
+// Export Functions
+// ==========================================
 window.showReportList = showReportList;
 window.showStatistics = showStatistics;
 window.showSettings = showSettings;
@@ -1575,8 +1663,11 @@ window.exportData = exportData;
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.removeImage = removeImage;
+window.testFCMNotification = testFCMNotification;
 
+// ==========================================
 // Init on load
+// ==========================================
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

@@ -1,17 +1,13 @@
-/* Service Worker - Info 24 Jam */
+/* Service Worker - Info 24 Jam (FIXED) */
 
-const CACHE_NAME = 'info24jam-v1.0.0';
+const CACHE_NAME = 'info24jam-v1.0.1';
 const urlsToCache = [
     '/',
     '/index.html',
     '/app.js',
     '/manifest.json',
     '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap',
-    'https://fonts.googleapis.com/icon?family=Material+Icons'
+    '/icons/icon-512.png'
 ];
 
 // Install Service Worker
@@ -21,14 +17,16 @@ self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Caching files');
-                return cache.addAll(urlsToCache);
+                console.log('[SW] Caching core files');
+                // Cache core files first, ignore external resources during install
+                return cache.addAll(urlsToCache.filter(url => url.startsWith('/')));
             })
             .catch(err => {
-                console.error('[SW] Cache error:', err);
+                console.error('[SW] Cache error during install:', err);
             })
     );
     
+    // Force immediate activation
     self.skipWaiting();
 });
 
@@ -37,19 +35,22 @@ self.addEventListener('activate', event => {
     console.log('[SW] Activating...');
     
     event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('[SW] Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
+        Promise.all([
+            // Clean old caches
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cacheName => {
+                        if (cacheName !== CACHE_NAME) {
+                            console.log('[SW] Deleting old cache:', cacheName);
+                            return caches.delete(cacheName);
+                        }
+                    })
+                );
+            }),
+            // Take control immediately
+            self.clients.claim()
+        ])
     );
-    
-    return self.clients.claim();
 });
 
 // Fetch Strategy: Network First, fallback to Cache
@@ -57,19 +58,20 @@ self.addEventListener('fetch', event => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
     
-    // Skip chrome extensions
-    if (event.request.url.startsWith('chrome-extension://')) return;
+    // Skip chrome extensions and other protocols
+    if (!event.request.url.startsWith('http')) return;
     
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // Clone response
-                const responseClone = response.clone();
-                
-                // Update cache
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, responseClone);
-                });
+                // Only cache successful responses
+                if (response && response.status === 200) {
+                    const responseClone = response.clone();
+                    
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseClone);
+                    });
+                }
                 
                 return response;
             })
@@ -86,9 +88,13 @@ self.addEventListener('fetch', event => {
                             return caches.match('/index.html');
                         }
                         
+                        // Return generic offline response
                         return new Response('Offline', {
                             status: 503,
-                            statusText: 'Service Unavailable'
+                            statusText: 'Service Unavailable',
+                            headers: new Headers({
+                                'Content-Type': 'text/plain'
+                            })
                         });
                     });
             })
@@ -134,12 +140,9 @@ self.addEventListener('notificationclick', event => {
     
     event.notification.close();
     
-    if (event.action === 'close') {
-        // User clicked close
-        return;
-    }
+    if (event.action === 'close') return;
     
-    // Default action or 'view' action
+    // Open app
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then(clientList => {
@@ -158,68 +161,4 @@ self.addEventListener('notificationclick', event => {
     );
 });
 
-// Background Sync (for offline report submission)
-self.addEventListener('sync', event => {
-    console.log('[SW] Background sync:', event.tag);
-    
-    if (event.tag === 'sync-reports') {
-        event.waitUntil(syncReports());
-    }
-});
-
-async function syncReports() {
-    try {
-        // Get pending reports from IndexedDB or localStorage
-        const pendingReports = await getPendingReports();
-        
-        for (let report of pendingReports) {
-            try {
-                // Try to submit report
-                await fetch('/api/reports', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(report)
-                });
-                
-                // Remove from pending
-                await removePendingReport(report.id);
-                
-                // Show success notification
-                self.registration.showNotification('✅ Laporan Terkirim', {
-                    body: 'Laporan yang tertunda berhasil dikirim',
-                    icon: '/icons/icon-192.png'
-                });
-            } catch (err) {
-                console.error('[SW] Sync error:', err);
-            }
-        }
-    } catch (err) {
-        console.error('[SW] Sync reports error:', err);
-    }
-}
-
-async function getPendingReports() {
-    // Implement IndexedDB or localStorage retrieval
-    return [];
-}
-
-async function removePendingReport(id) {
-    // Implement removal logic
-}
-
-// Message Handler (for communication with main app)
-self.addEventListener('message', event => {
-    console.log('[SW] Message received:', event.data);
-    
-    if (event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
-    
-    if (event.data.type === 'GET_VERSION') {
-        event.ports[0].postMessage({
-            version: CACHE_NAME
-        });
-    }
-});
-
-console.log('[SW] Service Worker loaded');
+console.log('[SW] Service Worker loaded successfully');
